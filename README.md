@@ -15,9 +15,10 @@ browser with WebGL, which every current desktop browser has.
 - The buttons at the top right jump to set views of the hunt.
 - **Toggle objects** shows or hides the prey's visual volumes, the foliage,
   *Portia*'s trajectory and the phases of the hunt.
-- The timeline plays the hunt at 1×, 10× or 50×.
-- ***Argiope versicolor* seen brightness** sets how strongly the foliage
-  visible to the prey is coloured.
+- The timeline plays the hunt at 1×, 10× or 50×. **◀ Step** and **Step ▶**
+  (or the ← and → keys) move one video frame (1/30 s) and pause.
+- **Prey's Visual Range Highlight** sets how strongly the foliage visible to
+  the prey is coloured.
 
 ## Contents
 

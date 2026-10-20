@@ -106,7 +106,7 @@ h1 {
 }
 .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
 .btn.ghost.active { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
-.speeds { display: flex; gap: 5px; }
+.speeds, .steps { display: flex; gap: 5px; }
 .status[hidden] { display: none; }
 .status {
   position: absolute;
@@ -266,9 +266,7 @@ h1 {
   align-items: center;
   gap: 7px;
   font-family: var(--font-data);
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
+  font-size: 11.5px;
   color: var(--muted);
 }
 #scrub { flex: 1 1 200px; min-width: 120px; accent-color: var(--accent); }
@@ -322,6 +320,10 @@ select {
 
   <div class="rail">
     <button class="btn" id="play" type="button">Pause</button>
+    <div class="steps">
+      <button class="btn ghost" id="stepBack" type="button" title="Back one frame (← key)">◀&#xFE0E; Step</button>
+      <button class="btn ghost" id="stepFwd" type="button" title="Forward one frame (→ key)">Step ▶&#xFE0E;</button>
+    </div>
     <input id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Timeline">
     <span class="time" id="time">0.00 / 0.00 s</span>
     <div class="speeds">
@@ -329,7 +331,7 @@ select {
       <button class="btn ghost" type="button" data-speed="10">10×</button>
       <button class="btn ghost" type="button" data-speed="50">50×</button>
     </div>
-    <label for="codemix" id="codemixWrap" hidden><em>Argiope versicolor</em> seen brightness
+    <label for="codemix" id="codemixWrap" hidden>Prey's Visual Range Highlight
       <input id="codemix" type="range" min="0" max="100" value="65" step="1"></label>
   </div>
 
@@ -421,6 +423,7 @@ select {
   var scrub = document.getElementById("scrub");
   var timeEl = document.getElementById("time");
   var speed = 1;
+  var frameT0 = 0, frameDt = 1 / 30;   // keyframe grid of the clip, set in useClips
 
   function useClips(root, list) {
     mixer = list.length ? new THREE.AnimationMixer(root) : null;
@@ -437,11 +440,20 @@ select {
       action.reset().play();
       duration = clip.duration || 0;
       mixer.timeScale = speed;
+      // a step is one keyframe of the densest track (one video frame)
+      var dense = null;
+      clip.tracks.forEach(function (tr) {
+        if (!dense || tr.times.length > dense.times.length) dense = tr;
+      });
+      if (dense && dense.times.length > 1) {
+        frameT0 = dense.times[0];
+        frameDt = (dense.times[dense.times.length - 1] - frameT0) / (dense.times.length - 1);
+      }
     }
     updateReadout(0);
   }
 
-  // m:ss, with a tenth on the playhead so scrubbing a 12-minute clip is usable.
+  // m:ss, with hundredths on the playhead so single-frame steps show.
   // Rounding before the split stops 59.97 s rendering as "0:60".
   function mmss(t, dp) {
     var p = Math.pow(10, dp);
@@ -453,7 +465,7 @@ select {
   }
 
   function updateReadout(t) {
-    timeEl.textContent = mmss(t, 1) + " / " + mmss(duration, 0);
+    timeEl.textContent = mmss(t, 2) + " / " + mmss(duration, 0);
     scrub.value = String(duration > 0 ? Math.round((t / duration) * 1000) : 0);
   }
 
@@ -473,6 +485,24 @@ select {
   scrub.addEventListener("input", function () {
     if (!mixer || duration <= 0) return;
     seek((Number(scrub.value) / 1000) * duration);
+  });
+
+  // one frame back or forward, snapped to the keyframe grid, and pause. The
+  // top is held just short of the end, where a looping clip wraps to 0.
+  function step(dir) {
+    if (!mixer || duration <= 0) return;
+    var k = Math.round((action.time - frameT0) / frameDt) + dir;
+    seek(Math.min(Math.max(frameT0 + k * frameDt, 0), duration - 1e-4));
+    playing = false;
+    playBtn.textContent = "Play";
+  }
+  document.getElementById("stepBack").addEventListener("click", function () { step(-1); });
+  document.getElementById("stepFwd").addEventListener("click", function () { step(1); });
+  window.addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;   // sliders keep their own arrows
+    if (e.key === "ArrowLeft") { step(-1); e.preventDefault(); }
+    if (e.key === "ArrowRight") { step(1); e.preventDefault(); }
   });
   var speedBtns = document.querySelectorAll("[data-speed]");
   Array.prototype.forEach.call(speedBtns, function (b) {
