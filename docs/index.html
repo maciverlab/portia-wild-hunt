@@ -116,6 +116,7 @@ h1 {
   color: var(--on-stage);
   font-family: var(--font-data);
   font-size: 12px;
+  white-space: pre-line;
   pointer-events: none;
 }
 .btn:hover { filter: brightness(1.08); }
@@ -188,16 +189,15 @@ h1 {
 .panel .body { max-height: min(46vh, 340px); overflow-y: auto; padding: 0 10px 9px; }
 .panel .row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;   /* box beside the first line when a label wraps */
   gap: 7px;
   padding: 2px 0;
   min-width: 0;
 }
-.panel .row input { accent-color: var(--accent); flex: none; }
+.panel .row input { accent-color: var(--accent); flex: none; margin: 2px 0 0; }
 .panel .row span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;   /* long exported names break instead of spilling */
   font-family: var(--font-data);
   font-size: 11px;
 }
@@ -303,7 +303,7 @@ select {
 
   <div class="stage" id="stage">
     <canvas id="view"></canvas>
-    <details class="panel" id="panel" open>
+    <details class="panel" id="panel">
       <summary>Toggle objects</summary>
       <div class="body">
         <div class="bulk">
@@ -507,6 +507,9 @@ select {
   // reconstruction off
   var NOT_TOGGLEABLE = ["Prey_Position", "Web_Cylinders", "Portia_-_Merged.011"];
 
+  // groups switched off when the page opens; their checkboxes turn them on
+  var START_HIDDEN = ["volumes"];
+
   // the order the hunt happens in, which is not the order the file lists
   var ORDER = ["Phase_1", "Phase_2", "Jump", "Phase_3", "Phase_4"];
 
@@ -638,6 +641,11 @@ select {
   document.getElementById("allOff").addEventListener("click", function () { setAll(false); });
 
   // ---- framing
+  // Where the camera starts. null frames the whole scene from a fixed angle.
+  // To choose a view, orbit to it and press V: the view is copied to the
+  // clipboard in this form, ready to paste here.
+  var INITIAL_VIEW = { position: [203.0759, 38.7702, -30.4058], target: [-12.6291, 18.5275, 3.2557] };
+
   function frame() {
     var box = new THREE.Box3().setFromObject(content);
     if (box.isEmpty()) return;
@@ -649,6 +657,10 @@ select {
     camera.position.copy(centre).add(
       new THREE.Vector3(0.75, 0.55, 1).normalize().multiplyScalar(dist)
     );
+    if (INITIAL_VIEW) {
+      camera.position.fromArray(INITIAL_VIEW.position);
+      controls.target.fromArray(INITIAL_VIEW.target);
+    }
     camera.near = Math.max(dist / 1000, 0.01);
     camera.far = dist * 40;
     camera.updateProjectionMatrix();
@@ -658,6 +670,29 @@ select {
     var step = Math.pow(10, Math.round(Math.log10(radius)) - 1) * 10;
     grid.scale.setScalar(Math.max(step, 0.01) / 1);
   }
+
+  // V shows the current view, and copies it, in the form INITIAL_VIEW takes
+  var viewMsgTimer = null;
+  window.addEventListener("keydown", function (e) {
+    if ((e.key !== "v" && e.key !== "V") || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!content.children.length) return;          // nothing loaded yet
+    function round(v) { return v.toArray().map(function (x) { return +x.toFixed(4); }); }
+    var text = "{ position: " + JSON.stringify(round(camera.position))
+             + ", target: " + JSON.stringify(round(controls.target)) + " }";
+    console.log("INITIAL_VIEW = " + text + ";");
+    function show(msg) {
+      status(msg);
+      clearTimeout(viewMsgTimer);
+      viewMsgTimer = setTimeout(function () { status(""); }, 6000);
+    }
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(
+        function () { show("View copied to the clipboard:\n" + text); },
+        function () { show("View (also in the browser console):\n" + text); });
+    } else {
+      show("View (also in the browser console):\n" + text);
+    }
+  });
 
 
   function clearContent() {
@@ -764,6 +799,7 @@ select {
     var top = gltf.scene.children.slice();
     while (top.length === 1 && top[0].children.length > 1) top = top[0].children.slice();
     buildObjectList(top);
+    START_HIDDEN.forEach(function (id) { setGroup(id, false); });
     document.getElementById("codemixWrap").hidden = codedMeshes.length === 0;
     useClips(gltf.scene, gltf.animations || []);
     frame();

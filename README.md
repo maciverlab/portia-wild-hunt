@@ -26,7 +26,7 @@ browser with WebGL, which every current desktop browser has.
 The model, `Portia_web.glb`, is not stored in git. It is attached to the
 [latest release](https://github.com/maciverlab/portia-wild-hunt/releases/latest),
 and the deploy workflow copies it into the site each time a release is
-published.
+published or a change to `docs/` is pushed to `main`.
 
 Code and data for the accompanying paper will be added here.
 
@@ -43,7 +43,15 @@ redeploy:
     gh release upload v1.0 Portia_web.glb --clobber
     gh workflow run deploy.yml
 
-To preview locally, put `Portia_web.glb` in `docs/` and serve the folder over
+## Changing the starting view
+
+Orbit to the view you want and press **V**. The view is copied to the
+clipboard; paste it as `INITIAL_VIEW` in `docs/index.html`. Groups listed in
+`START_HIDDEN` there (the visual volumes, by default) start switched off.
+
+## Previewing locally
+
+Put `Portia_web.glb` in `docs/` and serve the folder over
 http (opening `index.html` directly won't load the model):
 
     python3 -m http.server -d docs

@@ -3,6 +3,9 @@
 name: Deploy viewer
 
 on:
+  push:
+    branches: [main]
+    paths: ["docs/**"]
   release:
     types: [published]
   workflow_dispatch:
