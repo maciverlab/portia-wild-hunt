@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A 3D reconstruction of a wild Portia labiata hunt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
+
+<style>
+/* Layout: one screen — identity bar on top, 3D stage taking the room, transport rail beneath. */
+:root {
+  --bg: #eef1f3;
+  --surface: #ffffff;
+  --ink: #16202a;
+  --muted: #5c6b78;
+  --line: #cfd8de;
+  --accent: #b4531f;
+  --accent-ink: #ffffff;
+  --stage-a: #000000;
+  --stage-b: #000000;
+  --on-stage: #c3cdd6;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10161b;
+    --surface: #171f26;
+    --ink: #e6edf2;
+    --muted: #90a1ad;
+    --line: #27333c;
+    --accent: #e0873f;
+    --accent-ink: #15100a;
+    --stage-a: #000000;
+    --stage-b: #000000;
+    --on-stage: #c3cdd6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10161b;
+  --surface: #171f26;
+  --ink: #e6edf2;
+  --muted: #90a1ad;
+  --line: #27333c;
+  --accent: #e0873f;
+  --accent-ink: #15100a;
+  --stage-a: #000000;
+  --stage-b: #000000;
+  --on-stage: #c3cdd6;
+  color-scheme: dark;
+}
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-block: 12px 14px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
+}
+
+.bar { display: flex; align-items: baseline; gap: 12px 16px; flex-wrap: wrap; }
+h1 em { font-style: italic; font-weight: inherit; }
+h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(17px, 2.4vw, 21px);
+  letter-spacing: -0.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+.meta {
+  font-family: var(--font-data);
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.bar .spacer { flex: 1 1 auto; }
+
+.btn {
+  font: 500 12.5px/1 var(--font-body);
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 8px 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn.ghost.active { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.speeds { display: flex; gap: 5px; }
+.status[hidden] { display: none; }
+.status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--on-stage);
+  font-family: var(--font-data);
+  font-size: 12px;
+  pointer-events: none;
+}
+.btn:hover { filter: brightness(1.08); }
+:is(.btn, select, input, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 220px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  background: linear-gradient(var(--stage-a), var(--stage-b));
+}
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hint {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  font-family: var(--font-data);
+  font-size: 10.5px;
+  color: var(--on-stage);
+  opacity: 0.75;
+  pointer-events: none;
+}
+/* `hidden` only works here because this beats the UA stylesheet's
+   [hidden]{display:none}, which .drop's own display: grid would otherwise win against */
+.drop[hidden] { display: none; }
+.drop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;   /* never swallow an orbit drag, even if it lingers */
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 4px;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  border: 2px dashed var(--accent);
+  font-family: var(--font-display);
+  font-size: 15px;
+}
+.panel[hidden] { display: none; }
+.panel {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: min(248px, calc(100% - 20px));
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 12px;
+  overflow: hidden;
+}
+.panel summary {
+  cursor: pointer;
+  padding: 7px 10px;
+  font-family: var(--font-data);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  list-style: none;
+}
+.panel summary::-webkit-details-marker { display: none; }
+.panel summary::before { content: "▸ "; display: inline-block; }
+.panel[open] summary::before { content: "▾ "; }
+.panel .body { max-height: min(46vh, 340px); overflow-y: auto; padding: 0 10px 9px; }
+.panel .row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 0;
+  min-width: 0;
+}
+.panel .row input { accent-color: var(--accent); flex: none; }
+.panel .row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-data);
+  font-size: 11px;
+}
+.panel .group + .group { margin-top: 7px; border-top: 1px solid var(--line); padding-top: 6px; }
+.panel .row.head span {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.panel .kids { padding-left: 17px; }
+.panel .kids .row span { color: var(--muted); }
+.panel .bulk { display: flex; gap: 6px; padding: 2px 0 7px; }
+.panel .bulk button {
+  font: 500 10.5px var(--font-body);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.errbar[hidden] { display: none; }
+.errbar {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 26px;
+  max-height: 34%;
+  overflow: auto;
+  background: rgba(124, 24, 24, 0.93);
+  color: #fff;
+  font-family: var(--font-data);
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 8px 10px;
+  border-radius: 3px;
+  white-space: pre-wrap;
+}
+.fail {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--font-data);
+  font-size: 12px;
+}
+
+.rail {
+  display: flex;
+  align-items: center;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+.rail label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-data);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+#scrub { flex: 1 1 200px; min-width: 120px; accent-color: var(--accent); }
+#speed, #codemix { width: 86px; accent-color: var(--accent); }
+#codemixWrap[hidden] { display: none; }
+.time {
+  font-family: var(--font-data);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+select {
+  font: 400 12.5px var(--font-body);
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 6px 8px;
+  max-width: 190px;
+}
+.note { font-size: 11.5px; color: var(--muted); }
+.note code { font-family: var(--font-data); font-size: 11px; }
+
+@media (max-width: 520px) {
+  .time { font-size: 11px; }
+  .rail { gap: 8px 10px; }
+}
+</style>
+
+<div class="app">
+  <div class="bar">
+    <h1>A 3D reconstruction of a wild <em>Portia labiata</em> hunt</h1>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="view"></canvas>
+    <details class="panel" id="panel" open>
+      <summary>Toggle objects</summary>
+      <div class="body">
+        <div class="bulk">
+          <button type="button" id="allOn">All</button>
+          <button type="button" id="allOff">None</button>
+        </div>
+        <div id="objects"></div>
+      </div>
+    </details>
+    <div class="status" id="status">Loading…</div>
+  </div>
+
+  <div class="rail">
+    <button class="btn" id="play" type="button">Pause</button>
+    <input id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Timeline">
+    <span class="time" id="time">0.00 / 0.00 s</span>
+    <div class="speeds">
+      <button class="btn ghost active" type="button" data-speed="1">1×</button>
+      <button class="btn ghost" type="button" data-speed="10">10×</button>
+      <button class="btn ghost" type="button" data-speed="50">50×</button>
+    </div>
+    <label for="codemix" id="codemixWrap" hidden><em>Argiope versicolor</em> seen brightness
+      <input id="codemix" type="range" min="0" max="100" value="65" step="1"></label>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // Load one specific file on startup instead of the demo scene. Give it a path
+  // relative to this page, e.g. "habitat.glb", and serve the page over http —
+  // a browser blocks fetches from a file:// page, so double-clicking the HTML
+  // will not work. Leave it empty for the demo.
+  var MODEL_URL = "Portia_web.glb";
+
+  var stage = document.getElementById("stage");
+  var statusEl = document.getElementById("status");
+  function status(msg) {
+    statusEl.hidden = !msg;
+    if (msg) statusEl.textContent = msg;
+  }
+
+  if (!window.THREE || !THREE.GLTFLoader) {
+    var f = document.createElement("div");
+    f.className = "fail";
+    f.textContent = "three.js did not load from the CDN, so the viewer cannot start.";
+    stage.appendChild(f);
+    return;
+  }
+
+
+  var canvas = document.getElementById("view");
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(45, 1, 0.01, 2000);
+  camera.position.set(4.2, 3.0, 6.0);
+
+  var controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+
+  // Lighting: a key with shadows, a cool sky/ground fill, and a rim to separate
+  // silhouettes from the background. glTF carries no world lighting, so the
+  // page has to supply all of it.
+  var key = new THREE.DirectionalLight(0xffffff, 1.5);
+  key.position.set(5, 9, 6);
+  key.castShadow = true;
+  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.camera.near = 0.5;
+  key.shadow.camera.far = 60;
+  key.shadow.camera.left = key.shadow.camera.bottom = -12;
+  key.shadow.camera.right = key.shadow.camera.top = 12;
+  key.shadow.bias = -0.0008;
+  scene.add(key);
+  scene.add(new THREE.HemisphereLight(0xc9ddf0, 0x4a4036, 0.85));
+  var rim = new THREE.DirectionalLight(0xffffff, 0.45);
+  rim.position.set(-6, 3, -5);
+  scene.add(rim);
+
+  var ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(400, 400),
+    new THREE.ShadowMaterial({ opacity: 0.22 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  var grid = new THREE.GridHelper(40, 40, 0x7d8d99, 0x7d8d99);
+  grid.material.transparent = true;
+  grid.material.opacity = 0.3;
+  scene.add(grid);
+
+  var content = new THREE.Group();
+  scene.add(content);
+
+  // ---- the animation machinery: identical for the demo and for a loaded file
+  var mixer = null, clips = [], action = null, playing = true, duration = 0;
+  var clock = new THREE.Clock();
+  var playBtn = document.getElementById("play");
+  var scrub = document.getElementById("scrub");
+  var timeEl = document.getElementById("time");
+  var speed = 1;
+
+  function useClips(root, list) {
+    mixer = list.length ? new THREE.AnimationMixer(root) : null;
+    clips = list;
+    duration = 0;
+    if (mixer) {
+      // only the spider's own action, not every action in the file
+      var clip = null;
+      for (var i = 0; i < list.length; i++) {
+        if ((list[i].name || "").toLowerCase() === "action") { clip = list[i]; break; }
+      }
+      if (!clip) clip = list[0];
+      action = mixer.clipAction(clip);
+      action.reset().play();
+      duration = clip.duration || 0;
+      mixer.timeScale = speed;
+    }
+    updateReadout(0);
+  }
+
+  // m:ss, with a tenth on the playhead so scrubbing a 12-minute clip is usable.
+  // Rounding before the split stops 59.97 s rendering as "0:60".
+  function mmss(t, dp) {
+    var p = Math.pow(10, dp);
+    var v = Math.round(Math.max(0, t) * p) / p;
+    var m = Math.floor(v / 60);
+    var sec = v - m * 60;
+    if (sec >= 60) { m += 1; sec = 0; }
+    return m + ":" + (sec < 10 ? "0" : "") + sec.toFixed(dp);
+  }
+
+  function updateReadout(t) {
+    timeEl.textContent = mmss(t, 1) + " / " + mmss(duration, 0);
+    scrub.value = String(duration > 0 ? Math.round((t / duration) * 1000) : 0);
+  }
+
+  playBtn.addEventListener("click", function () {
+    playing = !playing;
+    playBtn.textContent = playing ? "Pause" : "Play";
+  });
+  scrub.addEventListener("input", function () {
+    if (!mixer || duration <= 0) return;
+    var t = (Number(scrub.value) / 1000) * duration;
+    mixer.setTime(t);
+    updateReadout(t);
+  });
+  var speedBtns = document.querySelectorAll("[data-speed]");
+  Array.prototype.forEach.call(speedBtns, function (b) {
+    b.addEventListener("click", function () {
+      speed = Number(b.getAttribute("data-speed"));
+      if (mixer) mixer.timeScale = speed;
+      Array.prototype.forEach.call(speedBtns, function (o) {
+        o.className = "btn ghost" + (o === b ? " active" : "");
+      });
+    });
+  });
+  document.getElementById("codemix").addEventListener("change", function () {
+    applyCoding(Number(this.value) / 100);      // on release: a full pass over 5.5M verts
+  });
+
+  // ---- object list, grouped by what the parts of the reconstruction are.
+  // Each group has a master checkbox and one row per exported object, named as
+  // it is named in the scene.
+  var GROUPS = [
+    { id: "volumes", label: "Visual volumes",
+      test: function (n) { return /^PreyFOV/i.test(n) || /^PreyEyes/i.test(n); } },
+    { id: "foliage", label: "Foliage, seen and not seen",
+      test: function (n) { return /smoothened_edges/i.test(n); } },
+    { id: "trajectory", label: "Portia's trajectory",
+      test: function (n) { return /^Spider_Trajectory/i.test(n) || /^Trajectory_/i.test(n); } },
+    { id: "phases", label: "Trajectory phases",
+      test: function (n) { return /^Phase_/i.test(n) || /^Jump$/i.test(n); } },
+  ];
+
+  // what each exported object is called in the panel; the exported name stays
+  // on the row as a tooltip
+  var LABELS = {
+    "Phase_1": "Initial crawl",
+    "Phase_2": "Aggressive mimicry",
+    "Phase_3": "Crawl behind leaf",
+    "Phase_4": "Roll and pitch body for attack",
+    "Spider_Trajectory": "Portia's trajectory",
+    "9_mil_smoothened_edges_+_thickened": "Foliage",
+    "9_mil_smoothened_edges_+_thickened_prey_seen": "Foliage with visual fields"
+  };
+
+  // always on screen, so a switch for them would only invite turning the
+  // reconstruction off
+  var NOT_TOGGLEABLE = ["Prey_Position", "Web_Cylinders", "Portia_-_Merged.011"];
+
+  // the order the hunt happens in, which is not the order the file lists
+  var ORDER = ["Phase_1", "Phase_2", "Jump", "Phase_3", "Phase_4"];
+
+  var listEl = document.getElementById("objects");
+  var toggles = [];                 // {box, obj, group}
+  var groupBoxes = {};              // group id -> master checkbox
+
+  function hasMesh(o) {
+    var found = false;
+    o.traverse(function (d) { if (d.isMesh) found = true; });
+    return found;
+  }
+
+  // A node that is only a container for meshes (PreyEyes holding the four eye
+  // volumes) is listed as its children, so each volume gets its own switch.
+  // Empties and curve-only nodes have nothing to show and are left out.
+  function renderableUnits(list) {
+    var out = [];
+    list.forEach(function (o) {
+      if (o.isLight || o.isCamera || !hasMesh(o)) return;
+      if (!o.isMesh && o.children.length) {
+        o.children.forEach(function (c) { if (hasMesh(c)) out.push(c); });
+      } else {
+        out.push(o);
+      }
+    });
+    return out;
+  }
+
+  function groupOf(name) {
+    for (var i = 0; i < GROUPS.length; i++) if (GROUPS[i].test(name)) return GROUPS[i].id;
+    return "other";
+  }
+
+  function setGroup(id, on) {
+    toggles.forEach(function (t) {
+      if (t.group !== id) return;
+      t.obj.visible = on;
+      t.box.checked = on;
+    });
+    syncGroupBoxes();
+  }
+
+  function syncGroupBoxes() {
+    GROUPS.forEach(function (g) {
+      var box = groupBoxes[g.id];
+      if (!box) return;
+      var mine = toggles.filter(function (t) { return t.group === g.id; });
+      var on = mine.filter(function (t) { return t.obj.visible; }).length;
+      box.checked = on > 0;
+      box.indeterminate = on > 0 && on < mine.length;
+    });
+  }
+
+  function buildObjectList(objects) {
+    listEl.innerHTML = "";
+    toggles = [];
+    groupBoxes = {};
+    var units = renderableUnits(objects).filter(function (o) {
+      return NOT_TOGGLEABLE.indexOf(o.name) === -1;
+    });
+
+    GROUPS.forEach(function (g) {
+      var mine = units.filter(function (o) { return groupOf(o.name || "") === g.id; });
+      if (!mine.length) return;
+      mine.sort(function (a, b) {
+        var ia = ORDER.indexOf(a.name), ib = ORDER.indexOf(b.name);
+        if (ia === -1 && ib === -1) return 0;
+        return ia === -1 ? 1 : ib === -1 ? -1 : ia - ib;
+      });
+
+      var wrap = document.createElement("div");
+      wrap.className = "group";
+      var head = document.createElement("label");
+      head.className = "row head";
+      var master = document.createElement("input");
+      master.type = "checkbox";
+      master.id = "grp_" + g.id;
+      master.checked = true;
+      var htext = document.createElement("span");
+      htext.textContent = g.label;
+      head.appendChild(master);
+      head.appendChild(htext);
+      wrap.appendChild(head);
+      groupBoxes[g.id] = master;
+      master.addEventListener("change", function () {
+        setGroup(g.id, master.checked);
+        // turning a volume on is meaningless without the foliage it is cast
+        // against, so bring that back with it
+        if (g.id === "volumes" && master.checked) setGroup("foliage", true);
+      });
+
+      var kids = document.createElement("div");
+      kids.className = "kids";
+      mine.forEach(function (obj, i) {
+        var label = LABELS[obj.name] || obj.name || ("object " + (i + 1));
+        var row = document.createElement("label");
+        row.className = "row";
+        var box = document.createElement("input");
+        box.type = "checkbox";
+        box.checked = obj.visible;
+        box.id = "vis_" + g.id + "_" + i;
+        var text = document.createElement("span");
+        text.textContent = label;
+        text.title = obj.name || label;        // the exported name on hover
+        box.addEventListener("change", function () {
+          obj.visible = box.checked;
+          if (g.id === "volumes" && box.checked) setGroup("foliage", true);
+          syncGroupBoxes();
+        });
+        row.appendChild(box);
+        row.appendChild(text);
+        kids.appendChild(row);
+        toggles.push({ box: box, obj: obj, group: g.id });
+      });
+      wrap.appendChild(kids);
+      listEl.appendChild(wrap);
+    });
+
+    syncGroupBoxes();
+    document.getElementById("panel").hidden = toggles.length === 0;
+  }
+
+  function setAll(on) {
+    toggles.forEach(function (t) { t.box.checked = on; t.obj.visible = on; });
+    syncGroupBoxes();
+  }
+  document.getElementById("allOn").addEventListener("click", function () { setAll(true); });
+  document.getElementById("allOff").addEventListener("click", function () { setAll(false); });
+
+  // ---- framing
+  function frame() {
+    var box = new THREE.Box3().setFromObject(content);
+    if (box.isEmpty()) return;
+    var size = box.getSize(new THREE.Vector3());
+    var centre = box.getCenter(new THREE.Vector3());
+    var radius = Math.max(size.x, size.y, size.z) * 0.5 || 1;
+    var dist = radius / Math.sin((camera.fov * Math.PI) / 360) * 1.5;
+    controls.target.copy(centre);
+    camera.position.copy(centre).add(
+      new THREE.Vector3(0.75, 0.55, 1).normalize().multiplyScalar(dist)
+    );
+    camera.near = Math.max(dist / 1000, 0.01);
+    camera.far = dist * 40;
+    camera.updateProjectionMatrix();
+    controls.update();
+    ground.position.y = box.min.y;
+    grid.position.y = box.min.y;
+    var step = Math.pow(10, Math.round(Math.log10(radius)) - 1) * 10;
+    grid.scale.setScalar(Math.max(step, 0.01) / 1);
+  }
+
+
+  function clearContent() {
+    content.traverse(function (o) {
+      if (o.isMesh) {
+        o.geometry.dispose();
+        (Array.isArray(o.material) ? o.material : [o.material]).forEach(function (m) {
+          if (m) m.dispose();
+        });
+      }
+    });
+    content.clear ? content.clear() : (content.children.length = 0);
+  }
+
+
+  // ---- showing the photo and the seen/not-seen coding at the same time.
+  // Vertex colours multiply into the base colour, so the raw code colour over a
+  // brown bark photo just comes out dark brown. Normalising each code colour so
+  // its brightest channel is 1 fixes that: unseen grey becomes white and leaves
+  // the photo alone, while a seen patch keeps its hue at full brightness. The
+  // slider fades between white and that hue.
+  //
+  // Done on the CPU into the colour attribute rather than in a patched shader,
+  // because a shader that fails to compile makes the mesh vanish with nothing
+  // on screen to say why.
+  // Multiplying can only darken, which is why a blue code over brown bark came
+  // out nearly black: the photo has no blue to keep. So the material is given a
+  // gain, and unseen foliage is written at 1/gain so it still renders as the
+  // plain photo. A seen patch is written at full hue, which the gain then lifts
+  // above the photo instead of below it.
+  var CODE_GAIN = 5;
+  var WEB_BRIGHTNESS = 0.85;   // base grey of the web strands, was 0.06
+  var WEB_GLOW = 0.45;         // emissive, so thin strands read without lighting
+  var codedMeshes = [];
+
+  function prepareCoding(mesh) {
+    var src = mesh.geometry.attributes.color_1;
+    var denom = src.array instanceof Uint8Array ? 255
+              : src.array instanceof Uint16Array ? 65535 : 1;
+    mesh.userData.codeSrc = src;
+    mesh.userData.codeDenom = denom;
+    mesh.geometry.setAttribute("color",
+      new THREE.BufferAttribute(new Uint8Array(src.count * 3), 3, true));
+    codedMeshes.push(mesh);
+  }
+
+  function applyCoding(k) {
+    codedMeshes.forEach(function (mesh) {
+      var src = mesh.userData.codeSrc;
+      var d = mesh.userData.codeDenom;
+      var dst = mesh.geometry.attributes.color;
+      var out = dst.array;
+      var n = src.count;
+      var base = 1 / CODE_GAIN;                 // renders as the untouched photo
+      for (var i = 0; i < n; i++) {
+        var r = src.getX(i) / d, g = src.getY(i) / d, b = src.getZ(i) / d;
+        var mx = Math.max(r, Math.max(g, b));
+        var mn = Math.min(r, Math.min(g, b));
+        // the unseen marker is a neutral grey, so near-zero saturation means
+        // "not seen" whatever its brightness
+        if (mx < 1e-6 || (mx - mn) / mx < 0.12) {
+          r = g = b = base;
+        } else {
+          r = base + k * (r / mx - base);
+          g = base + k * (g / mx - base);
+          b = base + k * (b / mx - base);
+        }
+        out[i * 3] = Math.round(255 * r);
+        out[i * 3 + 1] = Math.round(255 * g);
+        out[i * 3 + 2] = Math.round(255 * b);
+      }
+      dst.needsUpdate = true;
+    });
+  }
+
+  // ---- loading a file
+  var loader = new THREE.GLTFLoader();
+  function adopt(gltf, name) {
+    clearContent();
+    codedMeshes = [];
+    gltf.scene.traverse(function (o) {
+      if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
+      // glTF shades from COLOR_0 only, and here that layer is pure white. The
+      // seen/not-seen coding is in a second layer, which arrives as COLOR_1 and
+      // every standard viewer ignores, so build the colour attribute from it.
+      // the web exports at 6% grey, which disappears against a black viewport;
+      // the strands are too thin to catch much light, so lift it with emissive
+      if (o.isMesh && /^Web_Cylinders/i.test(o.name || "")) {
+        o.material = o.material.clone();
+        o.material.color.setScalar(WEB_BRIGHTNESS);
+        o.material.emissive = new THREE.Color(WEB_GLOW, WEB_GLOW, WEB_GLOW);
+        o.material.needsUpdate = true;
+      }
+      if (o.isMesh && o.geometry.attributes.color_1) {
+        o.material = o.material.clone();
+        o.material.vertexColors = true;
+        o.material.color.setScalar(CODE_GAIN);   // headroom for the hue to brighten
+        o.material.needsUpdate = true;
+        prepareCoding(o);
+      }
+    });
+    applyCoding(Number(document.getElementById("codemix").value) / 100);
+    content.add(gltf.scene);
+    var top = gltf.scene.children.slice();
+    while (top.length === 1 && top[0].children.length > 1) top = top[0].children.slice();
+    buildObjectList(top);
+    document.getElementById("codemixWrap").hidden = codedMeshes.length === 0;
+    useClips(gltf.scene, gltf.animations || []);
+    frame();
+    status("");
+    playing = true;
+    playBtn.textContent = "Pause";
+  }
+
+  function failed(name, err) {
+    status("Could not load " + name + " — "
+      + (err && err.message ? err.message : "unsupported or missing file"));
+  }
+
+
+  function loadUrl(url) {
+    status("Loading …");
+    var draco = new THREE.DRACOLoader();
+    draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/');
+    loader.setDRACOLoader(draco);
+
+    loader.load(url, function (gltf) { adopt(gltf, url); }, undefined,
+                function (err) { failed(url, err); });
+  }
+
+
+
+
+  // ---- sizing and the frame loop
+  function resize() {
+    var w = stage.clientWidth, h = stage.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+  window.addEventListener("resize", resize);
+
+  loadUrl(MODEL_URL);
+  resize();
+
+  renderer.setAnimationLoop(function () {
+    var dt = clock.getDelta();
+    if (mixer && playing) {
+      mixer.update(dt);
+      if (duration > 0) updateReadout(mixer.time % duration);
+    }
+    controls.update();
+    renderer.render(scene, camera);
+  });
+})();
+</script>
