@@ -91,6 +91,8 @@ h1 {
   min-width: 0;
 }
 .bar .spacer { flex: 1 1 auto; }
+.views { display: flex; gap: 5px; flex-wrap: wrap; }
+.views:empty { display: none; }
 
 .btn {
   font: 500 12.5px/1 var(--font-body);
@@ -299,6 +301,8 @@ select {
 <div class="app">
   <div class="bar">
     <h1>A 3D reconstruction of a wild <em>Portia labiata</em> hunt</h1>
+    <span class="spacer"></span>
+    <div class="views" id="views"></div>
   </div>
 
   <div class="stage" id="stage">
@@ -457,11 +461,18 @@ select {
     playing = !playing;
     playBtn.textContent = playing ? "Pause" : "Play";
   });
+  // mixer.setTime multiplies by the playback speed, so at 10x it would land
+  // ten times too far; seek at 1x and put the speed back
+  function seek(t) {
+    var s = mixer.timeScale;
+    mixer.timeScale = 1;
+    mixer.setTime(t);
+    mixer.timeScale = s;
+    updateReadout(t);
+  }
   scrub.addEventListener("input", function () {
     if (!mixer || duration <= 0) return;
-    var t = (Number(scrub.value) / 1000) * duration;
-    mixer.setTime(t);
-    updateReadout(t);
+    seek((Number(scrub.value) / 1000) * duration);
   });
   var speedBtns = document.querySelectorAll("[data-speed]");
   Array.prototype.forEach.call(speedBtns, function (b) {
@@ -640,11 +651,18 @@ select {
   document.getElementById("allOn").addEventListener("click", function () { setAll(true); });
   document.getElementById("allOff").addEventListener("click", function () { setAll(false); });
 
-  // ---- framing
-  // Where the camera starts. null frames the whole scene from a fixed angle.
-  // To choose a view, orbit to it and press V: the view is copied to the
-  // clipboard in this form, ready to paste here.
-  var INITIAL_VIEW = { position: [203.0759, 38.7702, -30.4058], target: [-12.6291, 18.5275, 3.2557] };
+  // ---- framing and views
+  // One button per view in the top bar; the first is where the camera starts
+  // (with none, the page frames the whole scene from a fixed angle). A view
+  // with a time also moves the timeline there and pauses. To add one, orbit
+  // to it and press V: the view is copied to the clipboard in this form,
+  // ready to paste here (drop the time if the view shouldn't move the clock).
+  // An optional note shows when the pointer is over the button.
+  var VIEWS = [
+    { name: "Overview", position: [203.0759, 38.7702, -30.4058], target: [-12.6291, 18.5275, 3.2557] },
+    { name: "Attack", note: "The attack, looking up from below to the prey",
+      position: [-17.4385, 107.0439, -18.6272], target: [-0.055, 55.7067, -9.9641], time: 2301.56 },
+  ];
 
   function frame() {
     var box = new THREE.Box3().setFromObject(content);
@@ -657,10 +675,7 @@ select {
     camera.position.copy(centre).add(
       new THREE.Vector3(0.75, 0.55, 1).normalize().multiplyScalar(dist)
     );
-    if (INITIAL_VIEW) {
-      camera.position.fromArray(INITIAL_VIEW.position);
-      controls.target.fromArray(INITIAL_VIEW.target);
-    }
+    if (VIEWS.length) goTo(VIEWS[0], false);
     camera.near = Math.max(dist / 1000, 0.01);
     camera.far = dist * 40;
     camera.updateProjectionMatrix();
@@ -671,15 +686,61 @@ select {
     grid.scale.setScalar(Math.max(step, 0.01) / 1);
   }
 
-  // V shows the current view, and copies it, in the form INITIAL_VIEW takes
+  // a camera move in progress, eased along a straight line; dragging cancels it
+  var flight = null;
+  controls.addEventListener("start", function () { flight = null; });
+
+  function goTo(view, animate) {
+    if (view.time != null && mixer && duration > 0) {
+      seek(Math.min(Math.max(view.time, 0), duration));
+      playing = false;
+      playBtn.textContent = "Play";
+    }
+    var p = new THREE.Vector3().fromArray(view.position);
+    var t = new THREE.Vector3().fromArray(view.target);
+    if (!animate) {
+      flight = null;
+      camera.position.copy(p);
+      controls.target.copy(t);
+      controls.update();
+      return;
+    }
+    flight = { p0: camera.position.clone(), t0: controls.target.clone(),
+               p1: p, t1: t, start: performance.now(), ms: 900 };
+  }
+
+  function fly() {
+    if (!flight) return;
+    var u = Math.min((performance.now() - flight.start) / flight.ms, 1);
+    var e = u < 0.5 ? 2 * u * u : 1 - Math.pow(2 - 2 * u, 2) / 2;   // ease in and out
+    camera.position.lerpVectors(flight.p0, flight.p1, e);
+    controls.target.lerpVectors(flight.t0, flight.t1, e);
+    if (u === 1) flight = null;
+  }
+
+  var viewsEl = document.getElementById("views");
+  VIEWS.forEach(function (v) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn ghost";
+    b.textContent = v.name;
+    if (v.note) b.title = v.note;               // shown on hover
+    b.addEventListener("click", function () {
+      if (content.children.length) goTo(v, true);
+    });
+    viewsEl.appendChild(b);
+  });
+
+  // V shows the current view, and copies it, in the form VIEWS takes
   var viewMsgTimer = null;
   window.addEventListener("keydown", function (e) {
     if ((e.key !== "v" && e.key !== "V") || e.metaKey || e.ctrlKey || e.altKey) return;
     if (!content.children.length) return;          // nothing loaded yet
     function round(v) { return v.toArray().map(function (x) { return +x.toFixed(4); }); }
-    var text = "{ position: " + JSON.stringify(round(camera.position))
-             + ", target: " + JSON.stringify(round(controls.target)) + " }";
-    console.log("INITIAL_VIEW = " + text + ";");
+    var text = '{ name: "New view", position: ' + JSON.stringify(round(camera.position))
+             + ", target: " + JSON.stringify(round(controls.target))
+             + (action ? ", time: " + action.time.toFixed(2) : "") + " },";
+    console.log(text);
     function show(msg) {
       status(msg);
       clearTimeout(viewMsgTimer);
@@ -847,6 +908,7 @@ select {
       mixer.update(dt);
       if (duration > 0) updateReadout(mixer.time % duration);
     }
+    fly();
     controls.update();
     renderer.render(scene, camera);
   });

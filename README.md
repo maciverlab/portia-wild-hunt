@@ -12,6 +12,7 @@ browser with WebGL, which every current desktop browser has.
 ## Using the viewer
 
 - Drag to orbit, scroll to zoom, right-drag to pan.
+- The buttons at the top right jump to set views of the hunt.
 - **Toggle objects** shows or hides the prey's visual volumes, the foliage,
   *Portia*'s trajectory and the phases of the hunt.
 - The timeline plays the hunt at 1×, 10× or 50×.
@@ -43,11 +44,16 @@ redeploy:
     gh release upload v1.0 Portia_web.glb --clobber
     gh workflow run deploy.yml
 
-## Changing the starting view
+## Views and starting state
 
-Orbit to the view you want and press **V**. The view is copied to the
-clipboard; paste it as `INITIAL_VIEW` in `docs/index.html`. Groups listed in
-`START_HIDDEN` there (the visual volumes, by default) start switched off.
+The view buttons in the top bar come from `VIEWS` in `docs/index.html`; the
+first is where the page opens. To add one, go to the moment and angle you want
+and press **V**. The view, including the timeline position, is copied to the
+clipboard, ready to paste into `VIEWS`. A view with a `time` moves the
+timeline there and pauses.
+
+Groups listed in `START_HIDDEN` (the visual volumes, by default) start
+switched off.
 
 ## Previewing locally
 
