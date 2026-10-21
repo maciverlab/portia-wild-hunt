@@ -873,12 +873,25 @@ select {
   }
 
   // ---- loading a file
+  // Once geometry is on the GPU, the page's own copy is dead weight, and on a
+  // phone holding both runs the tab out of memory. Drop it after upload. The
+  // colour layers stay, because the highlight slider rewrites them. Bounding
+  // volumes are computed (and cached) before the first upload, so framing and
+  // culling don't need the arrays afterwards.
+  function dropArray() { this.array = null; }
+  function freeAfterUpload(geometry) {
+    Object.keys(geometry.attributes).forEach(function (name) {
+      if (name !== "color" && name !== "color_1") geometry.attributes[name].onUpload(dropArray);
+    });
+    if (geometry.index) geometry.index.onUpload(dropArray);
+  }
+
   var loader = new THREE.GLTFLoader();
   function adopt(gltf, name) {
     clearContent();
     codedMeshes = [];
     gltf.scene.traverse(function (o) {
-      if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
+      if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; freeAfterUpload(o.geometry); }
       // glTF shades from COLOR_0 only, and here that layer is pure white. The
       // seen/not-seen coding is in a second layer, which arrives as COLOR_1 and
       // every standard viewer ignores, so build the colour attribute from it.
@@ -922,10 +935,14 @@ select {
     status("Loading …");
     var draco = new THREE.DRACOLoader();
     draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/');
+    // Each decoder worker keeps its own WebAssembly heap, grown to fit the
+    // biggest mesh it has decoded; four at once is enough to crash Safari on
+    // an iPhone. Decode one mesh at a time and shut the worker down after.
+    draco.setWorkerLimit(1);
     loader.setDRACOLoader(draco);
 
-    loader.load(url, function (gltf) { adopt(gltf, url); }, undefined,
-                function (err) { failed(url, err); });
+    loader.load(url, function (gltf) { draco.dispose(); adopt(gltf, url); }, undefined,
+                function (err) { draco.dispose(); failed(url, err); });
   }
 
 
