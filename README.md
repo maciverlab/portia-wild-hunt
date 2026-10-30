@@ -71,6 +71,17 @@ From the Blender scene, in order:
 3. `slim_glb.py` drops the animation clips that drive only marker empties —
    seventeen of twenty here — and re-encodes the textures at the resolution
    they already have. 117 MB → 94 MB.
+4. `merge_glb.py` is for changing one object afterwards without paying
+   for the other 93 MB. Re-export just that object from Blender, run
+   `draco_glb.py` on it alone, then splice it in: a node whose name
+   matches one already in the file takes over its mesh and transform,
+   and everything else — the animations, the skin, the textures, the
+   other meshes' compressed geometry — is copied through byte for byte.
+   Run Draco on the donor, never on the merged file: `draco_glb.py`
+   reads each primitive's accessors to report what it saved, and an
+   already-compressed primitive has no `bufferView` to read.
+   It refuses a donor carrying a skin or an animation, since neither
+   can be renumbered into an existing rig without judgement.
 
 Anything that opens the result without a Draco decoder will show an empty
 scene, because `KHR_draco_mesh_compression` is listed in `extensionsRequired`.
