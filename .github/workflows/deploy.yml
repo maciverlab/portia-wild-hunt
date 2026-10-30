@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Fetch the model from the latest release
-        run: gh release download --repo "$GITHUB_REPOSITORY" --pattern Portia_web.glb --dir docs
+        run: gh release download --repo "$GITHUB_REPOSITORY" --pattern "*.glb" --dir docs
         env:
           GH_TOKEN: ${{ github.token }}
       - uses: actions/configure-pages@v6
