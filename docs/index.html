@@ -297,6 +297,15 @@ h1 {
   // The spider mesh is welded (760 k vertices, not 4.28 M) and has no normals,
   // so it is drawn flat-shaded, as it was in Blender.
   // animation_final_small.glb still loads with the old foliage.
+  //
+  // PUBLISH THE RELEASE BEFORE PUSHING, not after. deploy.yml runs both on a
+  // push touching docs/ and on a release, and a Pages deployment is keyed by
+  // pages_build_version, which is the commit SHA. Two runs on one commit
+  // therefore claim the same deployment id and Pages keeps the FIRST. On v3.0
+  // the push ran first, fetched the then-latest v2.1 asset
+  // (portia_blended_small.glb) into docs/ and deployed; the release run
+  // fetched the right files eight seconds later and was silently discarded.
+  // The site served this page asking for a model that was not there.
   var MODEL_URL = "animation_final_foliage.glb";
   var DRACO_PATH = "draco/";
 
