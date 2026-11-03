@@ -1,13 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Can a Tiny Brain Plan? Reconstructing a Predatory Detour in the Jumping Spider Portia labiata</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
 
 <style>
-/* Layout: one screen — identity bar on top, 3D stage taking the room, transport rail beneath. */
+/* Layout and palette from portia-wild-hunt (docs/index.html): identity bar on
+   top, 3D stage taking the room, transport rail beneath. */
 :root {
   --bg: #eef1f3;
   --surface: #ffffff;
@@ -16,8 +19,7 @@
   --line: #cfd8de;
   --accent: #b4531f;
   --accent-ink: #ffffff;
-  --stage-a: #000000;
-  --stage-b: #000000;
+  --stage: #000000;
   --on-stage: #c3cdd6;
   --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
   --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
@@ -32,9 +34,6 @@
     --line: #27333c;
     --accent: #e0873f;
     --accent-ink: #15100a;
-    --stage-a: #000000;
-    --stage-b: #000000;
-    --on-stage: #c3cdd6;
     color-scheme: dark;
   }
 }
@@ -46,13 +45,10 @@
   --line: #27333c;
   --accent: #e0873f;
   --accent-ink: #15100a;
-  --stage-a: #000000;
-  --stage-b: #000000;
-  --on-stage: #c3cdd6;
   color-scheme: dark;
 }
 
-html, body { height: 100%; }
+html, body { height: 100%; margin: 0; }
 body {
   background: var(--bg);
   color: var(--ink);
@@ -71,8 +67,7 @@ body {
   box-sizing: border-box;
 }
 
-/* view buttons at the left, title centred on the page: the empty right
-   column balances the left one so the title sits in the true middle */
+/* view buttons at the left, title centred on the page */
 .bar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 44rem) minmax(0, 1fr);
@@ -82,13 +77,13 @@ body {
 .bar .views { grid-column: 1; grid-row: 1; justify-self: start; }
 .bar h1 { grid-column: 2; grid-row: 1; text-align: center; }
 .nowrap { white-space: nowrap; }
-@media (max-width: 1080px) {
+@media (max-width: 1280px) {
   .bar { grid-template-columns: minmax(0, 1fr); }
   .bar h1 { grid-column: 1; grid-row: 1; }
   .bar .views { grid-column: 1; grid-row: 2; }
 }
-.views { display: flex; gap: 5px; flex-wrap: wrap; }
-.views:empty { display: none; }
+.views { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.views .sep { width: 1px; align-self: stretch; background: var(--line); margin: 2px 3px; }
 h1 em { font-style: italic; font-weight: inherit; }
 h1 {
   font-family: var(--font-display);
@@ -98,14 +93,6 @@ h1 {
   margin: 0;
   text-wrap: balance;
 }
-.meta {
-  font-family: var(--font-data);
-  font-size: 11.5px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  min-width: 0;
-}
-.bar .spacer { flex: 1 1 auto; }
 
 .btn {
   font: 500 12.5px/1 var(--font-body);
@@ -119,26 +106,9 @@ h1 {
 }
 .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
 .btn.ghost.active { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
-.speeds, .steps { display: flex; gap: 5px; }
-.status[hidden] { display: none; }
-.status {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  padding: 24px;
-  text-align: center;
-  color: var(--on-stage);
-  font-family: var(--font-data);
-  font-size: 12px;
-  white-space: pre-line;
-  pointer-events: none;
-}
 .btn:hover { filter: brightness(1.08); }
-:is(.btn, select, input, summary):focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
+:is(.btn, input, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.speeds, .steps { display: flex; gap: 5px; }
 
 .stage {
   position: relative;
@@ -147,7 +117,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 4px;
   overflow: hidden;
-  background: linear-gradient(var(--stage-a), var(--stage-b));
+  background: var(--stage);
 }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .hint {
@@ -160,28 +130,30 @@ h1 {
   opacity: 0.75;
   pointer-events: none;
 }
-/* `hidden` only works here because this beats the UA stylesheet's
-   [hidden]{display:none}, which .drop's own display: grid would otherwise win against */
-.drop[hidden] { display: none; }
-.drop {
+.status[hidden] { display: none; }
+.status {
   position: absolute;
   inset: 0;
-  pointer-events: none;   /* never swallow an orbit drag, even if it lingers */
   display: grid;
   place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
   text-align: center;
-  gap: 4px;
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
-  border: 2px dashed var(--accent);
-  font-family: var(--font-display);
-  font-size: 15px;
+  color: var(--on-stage);
+  font-family: var(--font-data);
+  font-size: 12px;
+  white-space: pre-line;
+  pointer-events: none;
 }
-.panel[hidden] { display: none; }
+.status .track { width: 220px; height: 3px; background: rgba(255, 255, 255, 0.12); border-radius: 2px; overflow: hidden; }
+.status .fill { height: 100%; width: 0; background: var(--accent); }
+
 .panel {
   position: absolute;
   top: 10px;
   left: 10px;
-  width: min(248px, calc(100% - 20px));
+  width: min(272px, calc(100% - 20px));
   background: color-mix(in srgb, var(--surface) 90%, transparent);
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -199,70 +171,25 @@ h1 {
   list-style: none;
 }
 .panel summary::-webkit-details-marker { display: none; }
-.panel summary::before { content: "▸ "; display: inline-block; }
-.panel[open] summary::before { content: "▾ "; }
-.panel .body { max-height: min(46vh, 340px); overflow-y: auto; padding: 0 10px 9px; }
+.panel summary::before { content: "▸ "; display: inline-block; }
+.panel[open] summary::before { content: "▾ "; }
+.panel .body { max-height: min(52vh, 380px); overflow-y: auto; padding: 0 10px 9px; }
 .panel .row {
   display: flex;
   align-items: center;
   gap: 7px;
   padding: 2px 0;
   min-width: 0;
+  cursor: pointer;
 }
-.panel .row input { accent-color: var(--accent); flex: none; }
+.panel .row.off { opacity: 0.45; cursor: default; }
+.panel .row input { accent-color: var(--accent); flex: none; margin: 0; }
 .panel .row span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-data);
   font-size: 11px;
-}
-.panel .group + .group { margin-top: 7px; border-top: 1px solid var(--line); padding-top: 6px; }
-.panel .row.head span {
-  font-family: var(--font-body);
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--ink);
-}
-.panel .kids { padding-left: 17px; }
-.panel .kids .row span { color: var(--muted); }
-.panel .bulk { display: flex; gap: 6px; padding: 2px 0 7px; }
-.panel .bulk button {
-  font: 500 10.5px var(--font-body);
-  color: var(--ink);
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  padding: 3px 8px;
-  cursor: pointer;
-}
-.errbar[hidden] { display: none; }
-.errbar {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 26px;
-  max-height: 34%;
-  overflow: auto;
-  background: rgba(124, 24, 24, 0.93);
-  color: #fff;
-  font-family: var(--font-data);
-  font-size: 11px;
-  line-height: 1.45;
-  padding: 8px 10px;
-  border-radius: 3px;
-  white-space: pre-wrap;
-}
-.fail {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  padding: 24px;
-  text-align: center;
-  color: var(--muted);
-  font-family: var(--font-data);
-  font-size: 12px;
 }
 
 .rail {
@@ -275,86 +202,79 @@ h1 {
   border-radius: 4px;
   padding: 10px 12px;
 }
-.rail label {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-family: var(--font-data);
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--muted);
-}
-#scrub { flex: 1 1 200px; min-width: 120px; accent-color: var(--accent); }
-#speed, #codemix { width: 86px; accent-color: var(--accent); }
-#codemixWrap[hidden] { display: none; }
-#camWrap[hidden] { display: none; }
-#camWrap { display: block; margin-bottom: 8px; font-size: 12px; }
-#camsel { width: 100%; margin-top: 3px; }
+#play { min-width: 64px; }
 .time {
   font-family: var(--font-data);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-select {
-  font: 400 12.5px var(--font-body);
-  color: var(--ink);
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  padding: 6px 8px;
-  max-width: 190px;
+.phase {
+  font-family: var(--font-data);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  white-space: nowrap;
+  min-width: 13em;
 }
-.note { font-size: 11.5px; color: var(--muted); }
-.note code { font-family: var(--font-data); font-size: 11px; }
+
+/* the timeline, coloured by behavioural phase */
+#scrub { position: relative; flex: 1 1 220px; min-width: 140px; height: 26px; cursor: pointer; touch-action: none; }
+#strip { position: absolute; left: 0; right: 0; top: 9px; height: 8px; display: flex; border-radius: 2px; overflow: hidden; }
+#strip div { height: 100%; }
+#head { position: absolute; top: 3px; width: 3px; height: 20px; margin-left: -1.5px; border-radius: 1px;
+  background: var(--ink); box-shadow: 0 0 0 1px var(--surface); pointer-events: none; }
+.mark { position: absolute; top: 4px; height: 18px; border-left: 1px dashed var(--muted); pointer-events: none; }
+.mark b { position: absolute; top: -11px; left: 3px; font: 500 9.5px var(--font-data); color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
 
 @media (max-width: 520px) {
   .time { font-size: 11px; }
   .rail { gap: 8px 10px; }
+  .phase { min-width: 0; }
 }
 </style>
-
+</head>
+<body>
 <div class="app">
   <div class="bar">
-    <div class="views" id="views"></div>
+    <div class="views" id="views">
+      <button class="btn ghost" id="vFit" type="button">Overview</button>
+      <button class="btn ghost" id="vAttack" type="button" title="A moment before the strike, from in front of the web, looking at Portia">Attack</button>
+      <button class="btn ghost" id="vFollow" type="button">Follow Portia</button>
+      <button class="btn ghost" id="vPrey" type="button">From the prey</button>
+      <span class="sep"></span>
+      <span id="figs" class="views"></span>
+    </div>
     <h1>Can a Tiny Brain Plan? Reconstructing a Predatory Detour in the <span class="nowrap">Jumping Spider</span> <em>Portia labiata</em></h1>
   </div>
 
   <div class="stage" id="stage">
-    <canvas id="view"></canvas>
-    <details class="panel" id="panel">
+    <details class="panel" id="panel" open>
       <summary>Toggle objects</summary>
-      <div class="body">
-        <label for="camsel" id="camWrap" hidden>View from
-          <select id="camsel"></select></label>
-        <div class="bulk">
-          <button type="button" id="allOn">All</button>
-          <button type="button" id="allOff">None</button>
-        </div>
-        <div id="objects"></div>
-      </div>
+      <div class="body"><div id="layers"></div></div>
     </details>
-    <div class="status" id="status">Loading…</div>
+    <div class="status" id="status"><div id="statusText">Loading…</div><div class="track"><div class="fill" id="fill"></div></div></div>
+    <div class="hint">drag to orbit · scroll to zoom · right-drag to pan</div>
   </div>
 
   <div class="rail">
-    <button class="btn" id="play" type="button">Pause</button>
+    <button class="btn" id="play" type="button">Play</button>
     <div class="steps">
-      <button class="btn ghost" id="stepBack" type="button" title="Back one frame (&#8592; key)">&#9664;&#xFE0E; Step</button>
-      <button class="btn ghost" id="stepFwd" type="button" title="Forward one frame (&#8594; key)">Step &#9654;&#xFE0E;</button>
+      <button class="btn ghost" id="stepBack" type="button" title="Back one frame (&#8592; key; Shift+&#8592; 10 s)">&#9664;&#xFE0E; Step</button>
+      <button class="btn ghost" id="stepFwd" type="button" title="Forward one frame (&#8594; key; Shift+&#8594; 10 s)">Step &#9654;&#xFE0E;</button>
     </div>
-    <input id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Timeline">
-    <span class="time" id="time">0.00 / 0.00 s</span>
-    <div class="speeds">
-      <button class="btn ghost active" type="button" data-speed="1">1×</button>
+    <div id="scrub" role="slider" aria-label="Timeline"><div id="strip"></div><div id="head"></div></div>
+    <span class="time" id="clock">00:00 / 00:00</span>
+    <span class="phase" id="phase"></span>
+    <div class="speeds" id="speeds">
+      <button class="btn ghost" type="button" data-speed="1">1×</button>
       <button class="btn ghost" type="button" data-speed="10">10×</button>
-      <button class="btn ghost" type="button" data-speed="50">50×</button>
+      <button class="btn ghost active" type="button" data-speed="50">50×</button>
+      <button class="btn ghost" type="button" data-speed="100">100×</button>
     </div>
-    <label for="codemix" id="codemixWrap" hidden>Prey's Visual Range Highlight
-      <input id="codemix" type="range" min="0" max="100" value="65" step="1"></label>
   </div>
-
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -365,1643 +285,625 @@ select {
 (function () {
   "use strict";
 
-  // Load one specific file on startup instead of the demo scene. Give it a path
-  // relative to this page, e.g. "habitat.glb", and serve the page over http —
-  // a browser blocks fetches from a file:// page, so double-clicking the HTML
-  // will not work. Leave it empty for the demo.
-  // Draco-compressed by draco_glb.py: 481 MB of geometry down to 117,
-  // verified by decoding it back with the same library (worst position
-  // error 1 part in 33,000 of the model's own extent). The uncompressed
-  // glb_export_ready_gait_blended_final.glb still loads if the decoder
-  // ever becomes a problem.
-  var MODEL_URL = "portia_blended_small.glb";
+  // animation_final_webgl.glb, Draco-compressed by draco_glb.py and slimmed by
+  // slim_glb.py down to the four clips that move anything: Portia_merged_track,
+  // Portia_Walk, ArmatureAction.001 and Spider_bodyAction. The six dropped were
+  // the two _prev copies of the attack, Portia_Approach (one pose),
+  // Armature_Path_Follow (two keys) and the AveragedTrajectoryCorrectEmpty
+  // tracks, which drive an empty nothing hangs off.
+  // animation_final_foliage.glb is the same with the foliage swapped for
+  // foliage_glb.glb: the old scan and Portia_seen_patches have no mesh any more,
+  // and '..._prey_seen' carries the plant once, with the prey's view in _SEEN.
+  // The spider mesh is welded (760 k vertices, not 4.28 M) and has no normals,
+  // so it is drawn flat-shaded, as it was in Blender.
+  // animation_final_small.glb still loads with the old foliage.
+  var MODEL_URL = "animation_final_foliage.glb";
+  var DRACO_PATH = "draco/";
 
-  // The hand-off: scene frame 62431 at 30 fps. Portia walks the blended
-  // consensus track up to here and the attack rig takes over. It appears in
-  // half a dozen tables below, so it is named once.
-  var HANDOFF = 2081.03;
+  // Everything below is in seconds of hunt time. The file's own clip times are
+  // scene frames / 10, because Scene.001 plays at 10 fps while every key was
+  // authored at 30, so one second of hunt is three seconds of clip.
+  var FILE_PER_S = 3;
+  var FRAME_S = 1 / 30;       // one video frame, for the Step buttons
 
+  // The hand-off, scene frame 62431 at 30 fps: Portia_Walk ends and the attack
+  // rig (ArmatureAction.001) takes over. The export is in ACTION mode, so the
+  // attack clip starts at 0 rather than at its NLA strip's frame. Not marked on
+  // the timeline; it falls inside "Pitch + roll".
+  var HANDOFF = 62431 / 30;
 
+  // The attack is authored against 60 fps, so at 1x its strike lands four
+  // minutes after the tracks end. 2x puts it at about 38:37, a few seconds
+  // after the recorded track stops; webgl_viewer.html uses the same value.
+  var ATTACK_RATE = 2;
 
-  // Objects that should stay out of sight until a moment in the clip, named as
-  // they are named in the file, with the time in seconds.
-  //
-  //   var REVEAL_AT = { "Argiope": 2520, "Discoid": 1800 };
-  //
-  // This exists because glTF cannot carry Blender's visibility keyframes: the
-  // format animates only translation, rotation, scale and morph weights, so
-  // "hide until frame N" is dropped silently on export. The durable fix is to
-  // key scale 0 -> 1 at that frame in Blender with CONSTANT interpolation,
-  // which does export and needs nothing here; this table is the stopgap for a
-  // file already exported. A time beyond the longest clip never arrives.
-  // Spider A is a skinned mesh, so glTF ignores its node transform and the
-  // scale keys that hide Spider B cannot work for it. 2081 s is 34:41, the
-  // hand-off frame 62431 at 30 fps.
-  // Empty for the one-rig export: 'Portia - Merged.001' is now the spider for
-  // the WHOLE hunt - it walks the trajectory on its own IK and then attacks -
-  // so hiding it until 2081 s would leave the approach with nothing on screen.
-  // Restore
-  //   var REVEAL_AT = { "Portia - Merged.001": 2081.0 };
-  // only for a two-rig export, where a separate walking spider precedes it.
-  var REVEAL_AT = {};
-
-  // The same thing the other way round: visible until a moment, then gone. The
-  // hunt uses two spiders, because the walking rig and the attack rig share no
-  // bone names and so cannot share an action - 'Spider_Armature' walks the
-  // path with its own IK, 'Armature' strikes. One has to give way to the other
-  // at the hand-off, and since glTF carries no visibility channel that swap
-  // can only happen here. The two are aligned in Blender so the exchange is
-  // not a pop; what is left is the walk-stance-vs-crouch difference.
-  // Empty for the walk-only export: one spider, the armatured one, visible the
-  // whole way along the trajectory. Restore
-  //   var HIDE_AT = { "Portia - Merged": 2081.0 };
-  // together with REVEAL_AT above when exporting the two-rig hand-off, or the
-  // walking spider disappears at 2081 s with nothing to replace it.
-  var HIDE_AT = {};
-
-  // Objects switched off at load because something else occupies the same
-  // space. Everything else is forced visible; these are the exceptions.
-  // Off when the page opens, but still listed in the panel with a checkbox,
-  // unlike HIDE_ALWAYS above - tick them to bring them back.
-  // The prey's view of the route and the phase colouring are the same tube
-  // swept along the same curve, so both on at once is a z-fighting mess. The
-  // phases are the headline, so the visibility pair starts off; the panel's
-  // "What the prey can see of her route" box brings it back.
-  //
-  // The foliage is NOT listed any more. This export carries it once, not
-  // twice: '..._prey_seen' holds the plain photo in COLOR_0 and the seen /
-  // not-seen coding in COLOR_1, and the "Prey's Visual Range Highlight"
-  // slider fades between them. Hiding it would leave the hunt with no plant.
-  // A group id here hides the whole group; anything else is an object name.
-  // Everything with a switch starts off except the foliage, so the page opens
-  // on the plant and each layer is something you asked for. "trajectory" is
-  // listed although this export has nothing in it, so that a later export
-  // which does carry Spider_Trajectory does not come up with it already on.
-  //
-  // The foliage is deliberately absent. This export carries the plant once,
-  // not twice: '..._prey_seen' holds the photo in COLOR_0 and the seen /
-  // not-seen coding in COLOR_1, with the "Prey's Visual Range Highlight"
-  // slider fading between them, so hiding it would leave no plant at all.
-  // Portia is the stated exception to "everything off": the page opens on
-  // the plant and her coloured trajectory, and the eye volumes and the
-  // prey's-eye colouring of her route are added only if asked for. The
-  // spider herself has no switch at all and is always drawn.
-  var START_HIDDEN = ["volumes", "route", "trajectory"];
-
-  // Delay a clip so it starts later than t = 0. Spider A's rig is authored at
-  // the head of the timeline (ArmatureAction.001 runs 0 - 633 s) but the
-  // hand-off is at 2081 s, so without this its legs cycle through the opening
-  // half hour and are long finished by the time A is meant to take over. The
-  // durable fix is to slide those keys along in Blender's dope sheet; this
-  // does the same thing at playback.
-  // A's rig is authored to begin where B ends up: its first frame sits 0.34
-  // units from B's position at the 2081 s hand-off, and 1.27 from the Phase_4
-  // "roll and pitch body for attack" marker. So the clip's START is what lines
-  // up with the hand-off, and the offset is simply the hand-off time.
-  // Empty for the gait export, and this is the durable fix the note above asks
-  // for rather than another stopgap. That export is made with Blender's
-  // animation mode set to SCENE: the exporter evaluates the scene timeline and
-  // writes ONE clip covering frames 1-81430, so the hand-off is already at
-  // 2081 s in the data. There is no longer a clip named "ArmatureAction.001"
-  // to delay - the four armature actions (Portia_Walk, Portia_Approach,
-  // Path_Follow and the attack) were composed in the NLA before export, which
-  // is also the only place they CAN be composed: three.js has no equivalent of
-  // NLA blending, so the influence ramp and the pose blend-in would be lost if
-  // the clips were shipped separately and overlaid here.
-  var CLIP_START_AT = { "ArmatureAction.001": HANDOFF };
-
-  // Clips that must not play at all.
-  //
-  // This export is in ACTION mode, so Blender wrote out every action it found
-  // rather than the one timeline the NLA composes from them, and four of them
-  // land on the same 129 bone channels. three.js blends overlapping actions by
-  // weight, so playing all four gives each bone the mean of four poses - the
-  // spider ends up in a slurry of walk, attack and bind pose at once.
-  //
-  //   Armature_Path_Follow   two keyframes across 2081 s on 43 bones: the
-  //                          Follow-Path/Child-Of rig as exported without
-  //                          baking, which is to say nothing useful.
-  //   Portia_Approach        a single keyframe at t = 0 on 44 nodes - one
-  //                          pose, which would drag every bone towards it for
-  //                          the whole hunt.
-  //
-  // What remains is one owner per channel: Portia_Walk for the approach,
-  // ArmatureAction.001 for the attack, separated in time by CLIP_WINDOW below.
-  // Empty, because slim_glb.py removed the clips this used to name:
-  // Armature_Path_Follow, two keyframes of an unbaked Follow Path, and
-  // Portia_Approach, a single pose. Both would have dragged every bone
-  // towards themselves for the whole hunt had they been left playing.
-  // Restore them here if the model is ever rebuilt with every clip.
-  var CLIP_SKIP = [];
-
-  // How long the hand-off takes. Blender's NLA blend-in, which an ACTION-mode
-  // export drops on the floor. 0 switches instantly, which is what this page
-  // did before and what made the limbs snap.
+  // Joint crossfade at the hand-off (Blender's NLA blend-in, which an ACTION
+  // export drops), and how long before it the body eases from the carrier's
+  // last pose to the attack's first, 1.23 units away.
   var CROSSFADE_S = 1.0;
+  var CONVERGE_S = 10.0;
 
-  // Clips that fade in over whatever they replace, rather than cutting to
-  // their first pose. The clip being replaced is worked out from the windows:
-  // any clip whose window ends where a fading clip begins is held past its
-  // end, at a falling weight, for the length of the fade.
-  var CLIP_FADE = { "ArmatureAction.001": CROSSFADE_S };
+  // Behavioural phases, from combined_track.csv (seconds). Colours are the
+  // Portia_track phase materials' emission, in sRGB.
+  var PHASES = [
+    ["Start", 0, 54, "#ffdab3"],
+    ["Aggressive mimicry", 54, 492, "#4ae897"],
+    ["Reroute", 492, 732, "#defcfc"],
+    ["Hesitant jump", 732, 816, "#e8c6e5"],
+    ["Crawl behind leaf", 816, 1103, "#eeeaa1"],
+    ["Crawl up leaf (saltatory stalk)", 1103, 2069, "#b7c9fb"],
+    ["Pitch + roll", 2069, 2313, "#e5e5e5"],
+    ["Strike and eating", 2313, Infinity, "#d23c2e"]     // red from the strike itself, see buildStrip
+  ];
 
-  // When a clip is allowed to contribute: name -> [from, until] in seconds of
-  // timeline. Outside its window the clip is switched off entirely rather than
-  // held at its last pose, which is what makes a hand-off a hand-off instead
-  // of a fifty-fifty blend of before and after.
-  //
-  // A clip with no entry here keeps the old behaviour - nothing before it
-  // starts, its final pose held for ever after - which is what Blender does
-  // with an f-curve and what the markers, proxies and drivers all want.
-  //
-  // The two entries that matter:
-  //   the blended path owns AveragedTrajectoryCorrectEmpty up to the hand-off,
-  //   and the original 2311 s action owns it afterwards. Both drive the same
-  //   node, so without the split the empty - and the five followers parented
-  //   through it - would travel along the average of the old route and the new
-  //   one, which is neither.
-  //   Portia_Walk stops at the hand-off, where ArmatureAction.001 begins. The
-  //   walk clip ends there anyway; what this adds is that it stops HOLDING its
-  //   last pose, so the attack is not averaged against a standing spider.
-  // One entry, now that the marker clips are gone: the walk stops at the
-  // hand-off, where the attack begins. What this adds is that it stops
-  // HOLDING its last pose, so the attack is not averaged against a standing
-  // spider - the two clips still drive the same 129 bone channels, and
-  // without the window three.js would show the mean of both for ever after.
-  var CLIP_WINDOW = {
-    "Portia_Walk": [0, HANDOFF]
-  };
+  // The Argiope point cloud. Blender's glTF exporter drops loose vertices, so
+  // spider_filtered leaves only an empty node in the model; this is its
+  // render_region group clipped to the Discoid swept 2 mm along its normal
+  // (clip_points_to_discoid.py), 629,093 points written as a POINTS primitive
+  // already in world space, colours linear in COLOR_0. A copy of
+  // viewer/portia_points.glb.
+  var POINTS_URL = "argiope_points.glb";
+  var POINT_SIZE_PX = 0.5;    // screen pixels; points are ~0.025 mm apart
 
-  // Line a moment from INSIDE a clip up with a moment on the timeline, which
-  // is usually what you actually want. ArmatureAction.001 is 633 s of stalking
-  // with the jump 472.13 s into it, so delaying the clip's start to the
-  // hand-off puts the jump eight minutes further on, past the end of the hunt.
-  // "at" is the time within the clip, "to" is where it should land.
-  // Empty: aligning on the jump (clip t=472.13) was the wrong anchor. It put
-  // the jump at the hand-off but started the clip at 1609 s, where B is
-  // nowhere near, so A appeared in the wrong place. CLIP_START_AT above
-  // anchors on the clip's start instead, which is what the rig was built
-  // around. Use this when a clip's interesting moment is NOT its first frame.
-  var CLIP_ALIGN = {};
+  var FOLIAGE = "9_mil_smoothened_edges_+_thickened_prey_seen";
+  // The red tint on the foliage the prey can see is all or nothing, and goes
+  // on and off with the prey's visual volume (the layer marked `seen` below).
+  var SEEN_STRENGTH = 1.0;
 
-  // Play a clip faster or slower than the file says. 2 halves its length.
-  // ArmatureAction.001 runs 633 s, which overshoots the end of the hunt by
-  // minutes; at 2x it ends at 39:58 and its jump lands at 38:37, within
-  // seconds of where B's own track stops (38:31). That is the signature of an
-  // action authored against 60 fps and exported from a 30 fps scene, so the
-  // honest fix is the scene's frame rate in Blender - this reproduces it here.
-  // Empty for the gait export: the attack is an NLA strip placed at frames
-  // 62431-81430 on the scene timeline, so its length is now whatever the
-  // timeline says and no retiming is wanted here. Re-timing a clip in this
-  // table would also desynchronise it from the walk it is blended with, since
-  // both are the same clip.
-  // The attack is authored against 60 fps and exported from a 30 fps scene,
-  // so every event in it lands twice as late as it should. Measured in the
-  // file: the strike is a single 0.1 s leap at clip t = 472.1 s that moves
-  // the rig 18.56 units and ends 2.96 units from Argiope. Left at 1x that
-  // leap happens at 42:33 and the clip runs to 45:14 - four minutes after
-  // the recorded tracks stop at 38:31. At 2x it lands at 38:37, six seconds
-  // from the end of the data, and the clip ends at 39:57.
-  //
-  // This is not the same knob as SPEED_AFTER below. This changes WHERE on the
-  // timeline the attack's events fall; SPEED_AFTER only changes how fast the
-  // playhead crosses them, and would leave the strike four minutes late
-  // however fast it was watched.
-  var CLIP_SPEED = { "ArmatureAction.001": 2.0 };
+  // Panel rows: label, node names as in the file, on at load.
+  var LAYERS = [
+    { label: "Foliage scan", nodes: [FOLIAGE], on: true },
+    { label: "Web", nodes: ["WebDrawing", "Stabilimentum"], on: true },
+    { label: "Trajectory, by phase", nodes: ["Portia_track"], on: true },
+    { label: "Prey's visual volume and what it can see", nodes: ["PreyEyes"], on: false, seen: true },
+    { label: "Shortest jump path", nodes: ["JumpPath_walk", "JumpPath_jump"], on: false }
+  ];
+  // hidden, and no row in the panel: the SfM-tracked body and the alignment video frame
+  var HIDE_ALWAYS = ["SfM_Root", "AlignPhotoPlane"];
+  var WEB_OPACITY = 0.2;
+  var WEB_MESHES = ["WebDrawing_Solid", "WebDrawing_Anchors_Solid", "Stabilimentum_Solid"];
+  var UNLIT = [FOLIAGE];      // photo textures
 
-  // Run the timeline faster from a given moment, for when only part of the
-  // hunt is mistimed. CLIP_SPEED above cannot do this here: the gait export
-  // carries one clip, "Scene", so scaling it would retime the approach as
-  // well as the attack.
-  //
-  // The attack is an NLA strip at frames 62431-81430, which at the scene's
-  // 30 fps is 2081 s onward - the same hand-off the REVEAL_AT notes above
-  // refer to. From there the playhead advances at `rate` times normal.
-  //
-  // This changes only how fast the playhead moves, never the pose at a given
-  // playhead value, so scrubbing stays repeatable and the readout keeps
-  // showing true scene time. Set rate to 1 to switch it off.
-  var SPEED_AFTER = { at: 2081.0, rate: 2.0 };
+  // ------------------------------------------------------------------ scene
+  var stage = document.getElementById("stage");
+  function stageSize() { return [Math.max(1, stage.clientWidth), Math.max(1, stage.clientHeight)]; }
+  // The foliage is 9 M triangles, so pixels matter: by default draw at one
+  // device pixel per CSS pixel.
+  var renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+  renderer.setPixelRatio(1);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  stage.insertBefore(renderer.domElement, stage.firstChild);
 
-  function rateAt(t) {
-    return (SPEED_AFTER && SPEED_AFTER.rate && t >= SPEED_AFTER.at)
-      ? SPEED_AFTER.rate : 1;
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x000000);
+  var camera = new THREE.PerspectiveCamera(45, 1, 0.05, 5000);
+  var controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x444040, 1.0));
+  var sun = new THREE.DirectionalLight(0xffffff, 0.8);
+  sun.position.set(1, 2, 1.5);
+  scene.add(sun);
+
+  // sized to the stage, not the window: the bar and rail take their share
+  function resize() {
+    var s = stageSize();
+    camera.aspect = s[0] / s[1];
+    if (figure) camera.fov = fovFor(figure);
+    camera.updateProjectionMatrix();
+    renderer.setSize(s[0], s[1], false);
+    markDirty();
   }
+  new ResizeObserver(resize).observe(stage);
 
-  // Re-parent on load, keeping world position: "child": "new parent". A mesh
-  // that is not under the thing carrying its trajectory never moves, which is
-  // a scene-graph problem, not an animation one - the proper fix is to parent
-  // it in Blender so the export carries it.
-  // Empty since portia_web_gl.glb: the Follow Path was baked into real
-  // keyframes, so Portia_-_Merged.011 carries its own world-space track.
-  // Re-parenting it now would apply the trajectory twice.
-  var PARENT_TO = {};
-
-  // Child Of, for a stretch of the timeline: "child": {parent, until}. The
-  // child is parented to the parent, keeping the offset the two have at t = 0,
-  // until `until` - then it is handed back to the scene and whatever clip
-  // drives it takes over.
-  //
-  // PARENT_TO above cannot do this. It re-parents once, for good, and the
-  // attack clip writes Armature.translation in world space: under a parent
-  // those values would be read as local and the strike would happen a hundred
-  // units from the prey. The whole point here is that the parenting STOPS.
-  //
-  // Why it is needed at all: glTF has no constraints, and this export is in
-  // ACTION mode, so Blender wrote the bone actions and dropped the object-level
-  // path following. Portia_Walk's 62431 keys are all on IK targets - the
-  // largest range of any channel in it is 3.57 units - and nothing in the file
-  // moves the Armature node before the hand-off. Without this the spider
-  // cycles its legs on the spot for 34 minutes and then teleports to the prey.
-  //
-  // The parent is the carrier, not AveragedTrajectoryCorrectEmpty, because the
-  // empty's blended track spends its last ten seconds being dragged back to
-  // its rest position by the influence ramp over its last ten seconds -
-  // RAMP_SECONDS = 10.0 in blender_walk_blended_path.py. The carrier is the
-  // same path without that: 0.0000 units median difference over the rest of
-  // the clip.
-  //
-  // The 2.035-unit offset between them is Blender's own Child Of offset, which
-  // is why keeping the transform they have at t = 0 is the right bind: the
-  // export's rest transforms already hold it.
-  // `converge` is how long before the hand-off the body starts steering
-  // towards where the clip that takes over will put it, arriving exactly as
-  // it does. The annotated path and the attack rig disagree by 0.948 units
-  // about where she is standing when the strike begins; this spends that
-  // disagreement over the approach, where she is walking and it cannot be
-  // seen, instead of at the hand-off, where she is standing still and it
-  // reads as a lurch.
-  var FOLLOW_UNTIL = {
-    "Armature": { parent: "Portia_blended_carrier", until: HANDOFF,
-                  converge: 20.0 }
-  };
-
-  var followers = [];        // [{child, parent, home, bind, until, on}]
-
-  var revealed = [];          // [{obj, t}], resolved once the model is loaded
-
-  // Find a node by the name it has in the FILE. GLTFLoader renames nodes on
-  // import - PropertyBinding.sanitizeNodeName turns whitespace into
-  // underscores and deletes . : / [ ] - so "Portia - Merged.001" is called
-  // "Portia_-_Merged001" in the scene and a lookup by the original name finds
-  // nothing at all. The loader keeps the original in userData.name, so try
-  // that too, and report what was matched rather than failing silently.
-  function findObject(root, name) {
-    var sanitized = String(name).replace(/\s/g, "_").replace(/[\[\]\.:\/]/g, "");
-    var hit = root.getObjectByName(name) || root.getObjectByName(sanitized);
-    if (!hit) {
-      root.traverse(function (o) {
-        if (!hit && o.userData && o.userData.name === name) hit = o;
-      });
-    }
+  // GLTFLoader sanitises node names ("Portia - Merged.001" -> "Portia_-_Merged001")
+  // but keeps the original in userData.name.
+  function find(root, name) {
+    var s = String(name).replace(/\s/g, "_").replace(/[\[\]\.:\/]/g, "");
+    var hit = root.getObjectByName(name) || root.getObjectByName(s);
+    if (!hit) root.traverse(function (o) { if (!hit && o.userData.name === name) hit = o; });
     return hit;
   }
 
-  // ---- cameras baked into the file
-  // Blender only exports cameras when Include > Cameras is ticked, so a file
-  // without them simply leaves this hidden. A scene camera carries its own
-  // position, rotation and lens, and may be animated, so while one is active
-  // the orbit controls stand down and the mouse does nothing - switch back to
-  // "Free orbit" to fly around again.
-  var sceneCameras = [];      // [{name, cam}]
-  var activeCamera = null;    // null = the free orbit camera
+  // ------------------------------------------------------------------ state
+  var root, mixer, carrier, armature, spiderPoint, preyEyes;
+  var act = {};
+  var bind = new THREE.Matrix4(), parentInv = new THREE.Matrix4();
+  var attackStart = { p: new THREE.Vector3(), q: new THREE.Quaternion(), s: new THREE.Vector3() };
+  var tNow = 0, tEnd = 1, playing = false, strikeAt = null, speed = 50;
+  var camMode = "orbit";
+  var fitBox = new THREE.Box3();
+  var lastSpider = new THREE.Vector3();
 
-  // Cameras in the file that should not be offered. Names as they are in
-  // Blender; the sanitised form the loader produces is matched too, so
-  // "Camera.001" finds the node three.js calls "Camera001".
-  var CAMERAS_HIDDEN = ["Spider_View", "Camera.001"];
-
-  function cameraHidden(obj) {
-    var sanitize = function (n) {
-      return String(n).replace(/\s/g, "_").replace(/[\[\]\.:\/]/g, "");
-    };
-    for (var i = 0; i < CAMERAS_HIDDEN.length; i++) {
-      var want = CAMERAS_HIDDEN[i];
-      if (obj.name === want || (obj.userData && obj.userData.name === want)
-          || obj.name === sanitize(want)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  function collectCameras(root) {
-    sceneCameras = [];
-    if (USE_BAKED_CAMERAS) {
-      root.traverse(function (o) {
-        if (o.isCamera && !cameraHidden(o)) {
-          sceneCameras.push({ name: o.userData.name || o.name, cam: o });
-        }
-      });
-    }
-    var sel = document.getElementById("camsel");
-    sel.innerHTML = "";
-    var opt = document.createElement("option");
-    opt.value = "-1";
-    opt.textContent = "Free orbit";
-    sel.appendChild(opt);
-    sceneCameras.forEach(function (c, i) {
-      var o = document.createElement("option");
-      o.value = String(i);
-      o.textContent = c.name || ("camera " + (i + 1));
-      sel.appendChild(o);
-    });
-    document.getElementById("camWrap").hidden = sceneCameras.length === 0;
-    useCamera(-1);
-    console.log(!USE_BAKED_CAMERAS
-      ? "baked cameras ignored (USE_BAKED_CAMERAS = false); free orbit only"
-      : sceneCameras.length
-        ? "cameras in file: " + sceneCameras.map(function (c) { return c.name; }).join(", ")
-        : "no cameras in this file (tick Include > Cameras when exporting)");
-  }
-
-  function useCamera(index) {
-    activeCamera = index < 0 ? null : sceneCameras[index].cam;
-    controls.enabled = activeCamera === null;
-    resize();                              // the new camera needs the aspect
-  }
-
-  function applyParenting(root) {
-    root.updateMatrixWorld(true);          // attach() needs current world matrices
-    Object.keys(PARENT_TO).forEach(function (childName) {
-      var child = findObject(root, childName);
-      var parent = findObject(root, PARENT_TO[childName]);
-      if (!child || !parent) {
-        console.warn("PARENT_TO: missing " + (child ? PARENT_TO[childName] : childName));
-        return;
-      }
-      parent.attach(child);                // keeps the world transform it has now
-      console.log("re-parented " + childName + " under " + PARENT_TO[childName]);
-    });
-  }
-
-  // Work out each follower's offset and leave it detached; switchFollowers
-  // does the attaching. Called after the clips are in place, so the offset is
-  // the one the two objects have at t = 0 with the animation applied rather
-  // than the one their rest transforms happen to describe.
-  // The first pose of the clip that takes this node over, as a world matrix.
-  // Read straight out of the track values rather than by running the mixer,
-  // because the mixer would have to be moved to the hand-off and back and
-  // this is wanted before the first frame is drawn.
-  function successorStart(child, until) {
-    var want = null;
-    for (var i = 0; i < actions.length; i++) {
-      if (Math.abs(spans[i].from - until) > 1e-6) continue;
-      var tracks = actions[i].getClip().tracks;
-      for (var k = 0; k < tracks.length; k++) {
-        if (trackNode(tracks[k]) !== child.name) continue;
-        want = want || { pos: null, quat: null, scale: null };
-        var prop = String(tracks[k].name).split(".").pop();
-        if (prop === "position") {
-          want.pos = new THREE.Vector3().fromArray(tracks[k].values, 0);
-        } else if (prop === "quaternion") {
-          want.quat = new THREE.Quaternion().fromArray(tracks[k].values, 0);
-        } else if (prop === "scale") {
-          want.scale = new THREE.Vector3().fromArray(tracks[k].values, 0);
-        }
-      }
-    }
-    if (!want || !want.pos || !want.quat) return null;
-    // the tracks are local to the node's own parent, which is where it sits
-    // once the following stops, so this is the transform it will have then
-    var m = new THREE.Matrix4().compose(
-      want.pos, want.quat, want.scale || child.scale.clone());
-    child.parent.updateWorldMatrix(true, false);
-    return m.premultiply(child.parent.matrixWorld);
-  }
-
-  function buildFollowers(root) {
-    followers = [];
-    Object.keys(FOLLOW_UNTIL).forEach(function (name) {
-      var spec = FOLLOW_UNTIL[name];
-      var child = findObject(root, name);
-      var parent = findObject(root, spec.parent);
-      if (!child || !parent) {
-        console.warn("FOLLOW_UNTIL: missing "
-          + (child ? spec.parent : name));
-        return;
-      }
-      root.updateMatrixWorld(true);        // attach() reads world matrices
-      var home = child.parent;
-      var there = child.getWorldPosition(new THREE.Vector3());
-      parent.attach(child);                // keeps the world transform it has
-      var bind = child.matrix.clone();     // the offset, in the parent's frame
-      home.attach(child);                  // back where it was, for now
-      var goal = successorStart(child, spec.until);
-      if (spec.converge && !goal) {
-        console.warn("FOLLOW_UNTIL: nothing takes " + name + " over at "
-          + spec.until + " s, so there is nothing to converge on");
-      }
-      followers.push({ child: child, parent: parent, home: home, bind: bind,
-                       until: spec.until, converge: spec.converge || 0,
-                       goal: goal, on: false });
-      if (goal) {
-        // The distance actually being closed cannot be measured here: it is
-        // the gap at the hand-off, and the carrier's transform at that moment
-        // only exists once the mixer has been taken there. holdFollowers
-        // reports it on the first frame of the convergence instead.
-        console.log("FOLLOW_UNTIL: " + name + " converges on its successor "
-          + "over the " + spec.converge + " s before the hand-off");
-      }
-      console.log("FOLLOW_UNTIL: " + name + " follows " + spec.parent
-        + " until " + spec.until.toFixed(2) + " s, offset "
-        + there.distanceTo(parent.getWorldPosition(new THREE.Vector3()))
-            .toFixed(3) + " units");
-    });
-  }
-
-  // Attach or detach as the playhead crosses `until`. Both directions, because
-  // scrubbing backwards over the hand-off has to put the spider back on the
-  // path rather than leave it stranded where the attack left it.
-  // Put each follower under the right parent for time t. Called from
-  // applyTime BEFORE the mixer writes anything, which is the whole point: a
-  // clip that drives the child writes world-space values, and those only mean
-  // what they say if the child is already back at the scene root by the time
-  // they land. Doing this afterwards made the attack play rotated, because
-  // the attack's world rotation was applied while the child was still under
-  // the carrier and came out as carrier x attack.
-  function switchFollowers(t) {
-    followers.forEach(function (f) {
-      var want = t < f.until;
-      if (want === f.on) return;
-      f.on = want;
-      if (want) {
-        f.parent.add(f.child);
-      } else {
-        // add(), not attach(). attach() preserves the world transform the
-        // child has at this instant, and at this instant it is still holding
-        // a pose meant for a different parent - so it would bake the wrong
-        // matrix in and keep it until something overwrote it. The clip taking
-        // over sets position, rotation and scale outright, so there is
-        // nothing here worth preserving.
-        f.home.add(f.child);
-      }
-    });
-  }
-
-  // Re-impose the bind offset after the mixer has run. Needed every frame
-  // rather than only on the switch, because any clip that touches this node
-  // writes world-space values into position and rotation, and while the child
-  // is parented those mean nothing.
-  var tmpA = new THREE.Matrix4(), tmpB = new THREE.Matrix4();
-  var tmpP = new THREE.Vector3(), tmpQ = new THREE.Quaternion();
-  var tmpS = new THREE.Vector3();
-
-  function holdFollowers(t) {
-    followers.forEach(function (f) {
-      // Once the following has stopped the clip owns the node outright. It
-      // needs no easing, because the convergence below has already brought
-      // the body to exactly where the clip begins.
-      if (!f.on) return;
-      f.bind.decompose(f.child.position, f.child.quaternion, f.child.scale);
-      if (!f.goal || !f.converge) return;
-
-      var u = (t - (f.until - f.converge)) / f.converge;
-      if (u <= 0) { f.said = false; return; }
-      if (!f.said) {                 // once, when the convergence begins
-        f.said = true;
-        console.log("FOLLOW_UNTIL: " + f.child.name + " closing "
-          + new THREE.Vector3().setFromMatrixPosition(f.goal)
-              .distanceTo(f.child.getWorldPosition(new THREE.Vector3()))
-              .toFixed(3) + " units over the next " + f.converge + " s");
-      }
-      u = u > 1 ? 1 : u;
-      var e = u < 0.5 ? 2 * u * u : 1 - Math.pow(2 - 2 * u, 2) / 2;
-
-      // the goal is a world transform and the child is parented to the
-      // carrier at this point, so it has to be expressed in the carrier's
-      // frame before it can be mixed with the bind offset
-      f.parent.updateWorldMatrix(true, false);
-      tmpB.copy(f.parent.matrixWorld).invert();
-      tmpA.copy(f.goal).premultiply(tmpB);
-      tmpA.decompose(tmpP, tmpQ, tmpS);
-      f.child.position.lerp(tmpP, e);
-      f.child.quaternion.slerp(tmpQ, e);
-    });
-  }
-
-  function buildReveals(root) {
-    revealed = [];
-    Object.keys(REVEAL_AT).forEach(function (name) {
-      var obj = findObject(root, name);
-      if (!obj) { console.warn("REVEAL_AT: no object named " + name); return; }
-      console.log("REVEAL_AT: " + name + " (scene name \"" + obj.name
-        + "\") hidden until " + REVEAL_AT[name] + " s");
-      revealed.push({ obj: obj, t: REVEAL_AT[name], hide: false });
-      if (REVEAL_AT[name] > duration) {
-        console.warn("REVEAL_AT: " + name + " is set to " + REVEAL_AT[name]
-          + " s but the longest clip ends at " + duration.toFixed(1)
-          + " s, so it will never appear");
-      }
-    });
-    Object.keys(HIDE_AT).forEach(function (name) {
-      var obj = findObject(root, name);
-      if (!obj) { console.warn("HIDE_AT: no object named " + name); return; }
-      console.log("HIDE_AT: " + name + " (scene name \"" + obj.name
-        + "\") visible until " + HIDE_AT[name] + " s");
-      revealed.push({ obj: obj, t: HIDE_AT[name], hide: true });
-      if (HIDE_AT[name] > duration) {
-        console.warn("HIDE_AT: " + name + " is set to " + HIDE_AT[name]
-          + " s but the longest clip ends at " + duration.toFixed(1)
-          + " s, so it never goes away");
-      }
-    });
-  }
-
-  function applyReveals(t) {
-    for (var i = 0; i < revealed.length; i++) {
-      var r = revealed[i];
-      r.obj.visible = r.hide ? t < r.t : t >= r.t;
-    }
-  }
-
-  var stage = document.getElementById("stage");
   var statusEl = document.getElementById("status");
-  function status(msg) {
-    statusEl.hidden = !msg;
-    if (msg) statusEl.textContent = msg;
+  function status(msg, frac) {
+    document.getElementById("statusText").textContent = msg;
+    if (frac != null) document.getElementById("fill").style.width = (100 * frac).toFixed(1) + "%";
   }
 
-  if (!window.THREE || !THREE.GLTFLoader) {
-    var f = document.createElement("div");
-    f.className = "fail";
-    f.textContent = "three.js did not load from the CDN, so the viewer cannot start.";
-    stage.appendChild(f);
-    return;
-  }
+  // ------------------------------------------------------------------ load
+  var loader = new THREE.GLTFLoader();
+  var draco = new THREE.DRACOLoader();
+  draco.setDecoderPath(DRACO_PATH);
+  draco.setWorkerLimit(1);
+  loader.setDRACOLoader(draco);
+  // After the download the geometry still has to be decompressed (about 15 s
+  // for the 5.5 M-vertex scan), with nothing to report progress by; a decoder
+  // that dies in its worker never answers at all.
+  var watchdog = null;
+  loader.load(MODEL_URL, function (g) { clearTimeout(watchdog); onLoad(g); }, function (e) {
+    var mb = (e.loaded / 1e6).toFixed(0);
+    if (e.total && e.loaded >= e.total) {
+      status("Decompressing geometry… (usually under a minute)", 1);
+      clearTimeout(watchdog);
+      watchdog = setTimeout(function () {
+        status("Still decompressing after 3 minutes - the decoder has probably failed.\nSee the browser console (F12).");
+      }, 180000);
+    } else if (e.total) status("Loading model… " + mb + " / " + (e.total / 1e6).toFixed(0) + " MB", e.loaded / e.total);
+    else status("Loading model… " + mb + " MB");
+  }, function (err) {
+    clearTimeout(watchdog);
+    status(location.protocol === "file:"
+      ? "Serve the docs folder over http (python3 -m http.server -d docs), not as a file."
+      : "Could not load " + MODEL_URL + ": " + (err && err.message || err));
+    console.error(err);
+  });
 
+  function onLoad(gltf) {
+    status("Preparing…", 1);
+    root = gltf.scene;
+    scene.add(root);
+    prepareMaterials();
+    buildLayers();
 
-  var canvas = document.getElementById("view");
-  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    carrier = find(root, "Portia_blended_carrier");
+    armature = find(root, "Armature");
+    preyEyes = find(root, "PreyEyes");
+    spiderPoint = find(root, "C") || armature;     // the body's root bone
+    root.traverse(function (o) { if (o.isSkinnedMesh) o.frustumCulled = false; });
 
-  var scene = new THREE.Scene();
-  var camera = new THREE.PerspectiveCamera(45, 1, 0.01, 2000);
-  camera.position.set(4.2, 3.0, 6.0);
+    // The spider follows the carrier through a Blender constraint that glTF
+    // cannot carry. The export's rest transforms hold the two at their t = 0
+    // offset (2.03 units), so that offset is the bind.
+    root.updateMatrixWorld(true);
+    bind.copy(carrier.matrixWorld).invert().multiply(armature.matrixWorld);
+    parentInv.copy(armature.parent.matrixWorld).invert();
 
-  var controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
+    setupClips(gltf.animations);
 
-  // Lighting: a key with shadows, a cool sky/ground fill, and a rim to separate
-  // silhouettes from the background. glTF carries no world lighting, so the
-  // page has to supply all of it.
-  var key = new THREE.DirectionalLight(0xffffff, 1.5);
-  key.position.set(5, 9, 6);
-  key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024);
-  key.shadow.camera.near = 0.5;
-  key.shadow.camera.far = 60;
-  key.shadow.camera.left = key.shadow.camera.bottom = -12;
-  key.shadow.camera.right = key.shadow.camera.top = 12;
-  key.shadow.bias = -0.0008;
-  scene.add(key);
-  scene.add(new THREE.HemisphereLight(0xc9ddf0, 0x4a4036, 0.85));
-  var rim = new THREE.DirectionalLight(0xffffff, 0.45);
-  rim.position.set(-6, 3, -5);
-  scene.add(rim);
-
-  var ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(400, 400),
-    new THREE.ShadowMaterial({ opacity: 0.22 })
-  );
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
-
-  var grid = new THREE.GridHelper(40, 40, 0x7d8d99, 0x7d8d99);
-  grid.material.transparent = true;
-  grid.material.opacity = 0.3;
-  scene.add(grid);
-
-  var content = new THREE.Group();
-  scene.add(content);
-
-  // ---- the animation machinery: identical for the demo and for a loaded file
-  var mixer = null, clips = [], action = null, actions = [], playing = true, duration = 0;
-  var playhead = 0;           // seconds along the timeline; the one source of truth
-  var offsets = [];           // per-action start offset, parallel to `actions`
-  var speeds = [];            // per-action playback rate, parallel to `actions`
-  var spans = [];             // per-action {from, to} window, same order
-  var frameT0 = 0, frameDt = 1 / 30;   // keyframe grid, set in useClips
-  var clock = new THREE.Clock();
-  var playBtn = document.getElementById("play");
-  var scrub = document.getElementById("scrub");
-  var timeEl = document.getElementById("time");
-  var speed = 1;
-
-  // The node a track drives, by the name three.js gave it on import.
-  function trackNode(track) {
-    if (THREE.PropertyBinding && THREE.PropertyBinding.parseTrackName) {
-      try { return THREE.PropertyBinding.parseTrackName(track.name).nodeName; }
-      catch (e) { /* fall through */ }
-    }
-    return String(track.name).split(".")[0];
-  }
-
-  // Split a fading clip in two, so the parts can be weighted differently:
-  // the tracks driving a FOLLOW_UNTIL child are world-space and have to
-  // arrive at full strength, everything else is pose and can fade.
-  // bases[] carries the original name, because CLIP_WINDOW and CLIP_START_AT
-  // are written against it and neither half would match otherwise.
-  function splitFading(list, bases) {
-    var hard = {};
-    Object.keys(FOLLOW_UNTIL).forEach(function (n) {
-      hard[n] = true;
-      hard[String(n).replace(/\s/g, "_").replace(/[\[\]\.:\/]/g, "")] = true;
-    });
-    var out = [];
-    list.forEach(function (clip) {
-      var body = [], pose = [];
-      if (CLIP_FADE[clip.name]) {
-        clip.tracks.forEach(function (tr) {
-          (hard[trackNode(tr)] ? body : pose).push(tr);
-        });
-      }
-      if (body.length && pose.length) {
-        out.push(new THREE.AnimationClip(clip.name + " (body)",
-                                         clip.duration, body));
-        bases[clip.name + " (body)"] = clip.name;
-        out.push(new THREE.AnimationClip(clip.name + " (pose)",
-                                         clip.duration, pose));
-        bases[clip.name + " (pose)"] = clip.name;
-        console.log("  split " + clip.name + ": " + body.length
-          + " body track(s) switch at the hand-off, " + pose.length
-          + " pose track(s) fade in over " + CLIP_FADE[clip.name] + " s");
-      } else {
-        out.push(clip);
-        bases[clip.name] = clip.name;
-      }
-    });
-    return out;
-  }
-
-  function useClips(root, all) {
-    var list = all.filter(function (c) {
-      return CLIP_SKIP.indexOf(c.name) === -1;
-    });
-    if (list.length !== all.length) {
-      console.log("skipped " + (all.length - list.length) + " clip(s): "
-        + all.filter(function (c) { return CLIP_SKIP.indexOf(c.name) !== -1; })
-             .map(function (c) { return c.name; }).join(", "));
-    }
-    var bases = {};
-    list = splitFading(list, bases);
-    mixer = list.length ? new THREE.AnimationMixer(root) : null;
-    clips = list;
-    duration = 0;
-    offsets = [];
-    speeds = [];
-    spans = [];
-    if (mixer) {
-      // Every clip, not just one. portia_anime.glb carries four - the leg rig
-      // (ArmatureAction.001) plus three that move whole objects through the
-      // scene (SpiderProxy_Corrected, ChenProxy, Spider_Trajectory). Playing
-      // only the first left the spider treading air: legs cycling, body still.
-      actions = list.map(function (clip) {
-        var a = mixer.clipAction(clip);
-        // Hold the last pose instead of looping. three.js repeats a clip for
-        // ever by default, but Blender holds an f-curve's final value, and the
-        // clips here are wildly different lengths - the leg rig ends at 633 s
-        // on a 2311 s timeline, so looping would restart the spider three times
-        // over and put it somewhere else entirely at the 2081 s hand-off.
-        a.setLoop(THREE.LoopOnce, 1);
-        a.clampWhenFinished = true;
-        a.play();
-        var base = bases[clip.name] || clip.name;
-        var align = CLIP_ALIGN[base];
-        var delay = (align ? align.to - align.at : CLIP_START_AT[base]) || 0;
-        // the offset is kept alongside the action rather than handed to
-        // action.startAt(), which three.js treats as a one-shot schedule: it
-        // clears the start time the first time the clip fires, after which
-        // every seek evaluates the clip as though it began at zero. applyTime()
-        // below sets each action's time outright, so a seek lands in the same
-        // place whichever direction it is approached from. (An AnimationAction
-        // is not an Object3D and has no userData, hence the parallel array.)
-        var rate = CLIP_SPEED[base] || 1;
-        var span = (clip.duration || 0) / rate;      // how long it occupies
-        var win = CLIP_WINDOW[base] || [0, Infinity];
-        offsets.push(delay);
-        speeds.push(rate);
-        // `to` is the table's value untouched, not clipped to the clip's own
-        // end. A clip that has run out still holds its last pose, which is
-        // what Blender does with an f-curve and what the default [0, Infinity]
-        // therefore has to mean; only a clip named in CLIP_WINDOW stops.
-        // only the pose half fades in; the body half arrives at full weight
-        var fadeIn = (CLIP_FADE[base] && !/ \(body\)$/.test(clip.name))
-          ? CLIP_FADE[base] : 0;
-        spans.push({ from: Math.max(delay, win[0]), to: win[1],
-                     fadeIn: fadeIn, fadeOut: 0 });
-        if (delay || rate !== 1) {
-          console.log("  " + clip.name + " offset " + delay.toFixed(2) + " s"
-            + (rate !== 1 ? ", " + rate + "x speed" : "")
-            + (align ? " (clip t=" + align.at + " lands at " + align.to + " s)" : "")
-            + ", spans " + delay.toFixed(0) + "-" + (delay + span).toFixed(0) + " s");
-        }
-        duration = Math.max(duration, delay + span);
-        return a;
-      });
-      // Whatever ends where a fading clip starts is the clip being replaced:
-      // hold it that much longer, at a falling weight, so the two sum to 1
-      // across the hand-off instead of one of them simply vanishing.
-      list.forEach(function (clip, i) {
-        if (!spans[i].fadeIn) return;
-        for (var k = 0; k < spans.length; k++) {
-          if (k !== i && Math.abs(spans[k].to - spans[i].from) < 1e-6) {
-            spans[k].fadeOut = spans[i].fadeIn;
-            spans[k].to += spans[i].fadeIn;
-            console.log("  " + list[k].name + " held "
-              + spans[i].fadeIn + " s past " + spans[i].from.toFixed(2)
-              + " s, fading out under " + clip.name);
-          }
-        }
-      });
-
-      action = actions[0];
-      mixer.timeScale = 1;                 // speed is applied to the playhead
-      console.log("playing " + list.length + " clip(s): "
-        + list.map(function (c) {
-            return (c.name || "?") + " (" + (c.duration || 0).toFixed(1) + "s)";
-          }).join(", "));
-      reportConflicts();
-      // a step is one keyframe of the densest track, which for a 30 fps scene
-      // export is one video frame
-      var dense = null;
-      list.forEach(function (clip) {
-        clip.tracks.forEach(function (tr) {
-          if (!dense || tr.times.length > dense.times.length) dense = tr;
-        });
-      });
-      if (dense && dense.times.length > 1) {
-        frameT0 = dense.times[0];
-        frameDt = (dense.times[dense.times.length - 1] - frameT0)
-                / (dense.times.length - 1);
-      }
-    }
-    playhead = 0;
+    var foliage = find(root, FOLIAGE);
+    fitBox.setFromObject(foliage || root);
+    fit();
+    buildStrip();
     applyTime(0);
-    updateReadout(0);
+    statusEl.hidden = true;
+    markDirty();
+    loadPoints();
   }
 
-  // Say so when two clips still fight over the same channel.
-  //
-  // Worth the twenty lines: a blend of two poses does not look like a bug, it
-  // looks like bad animation, and there is nothing on screen to say which clip
-  // is to blame. CLIP_SKIP and CLIP_WINDOW are only right for the export they
-  // were written against - a re-export with different action names would leave
-  // them pointing at nothing, and this is what notices.
-  function reportConflicts() {
-    var owners = {};                    // "Node.property" -> [action index]
-    actions.forEach(function (a, i) {
-      a.getClip().tracks.forEach(function (tr) {
-        (owners[tr.name] = owners[tr.name] || []).push(i);
+  function loadPoints() {
+    if (!POINTS_URL) return;
+    loader.load(POINTS_URL, function (g) {
+      var mat = new THREE.PointsMaterial({ size: POINT_SIZE_PX, sizeAttenuation: false, vertexColors: true });
+      var n = 0;
+      g.scene.traverse(function (o) {
+        if (!o.isPoints) return;
+        o.material = mat;
+        n += o.geometry.attributes.position.count;
+      });
+      scene.add(g.scene);           // always shown, no row in the panel
+      preyBox.setFromObject(g.scene);
+      markDirty();
+      console.log("points: " + n.toLocaleString() + " from " + POINTS_URL);
+    }, undefined, function (err) {
+      console.warn("no point cloud (" + POINTS_URL + "): " + (err && err.message || err));
+    });
+  }
+
+  function prepareMaterials() {
+    WEB_MESHES.forEach(function (n) {
+      var o = find(root, n);
+      if (!o) return;
+      o.material = new THREE.MeshBasicMaterial({ color: 0xf4f2ea, transparent: true,
+        opacity: WEB_OPACITY, side: THREE.DoubleSide, depthWrite: false });
+      o.renderOrder = 2;
+    });
+    UNLIT.forEach(function (n) {
+      var o = find(root, n);
+      if (!o) return;
+      o.traverse(function (m) {
+        if (!m.isMesh) return;
+        var old = m.material;
+        m.material = new THREE.MeshBasicMaterial({ map: old.map, color: old.color,
+          vertexColors: old.vertexColors, side: THREE.DoubleSide });
       });
     });
-    var clashes = {}, n = 0;
-    Object.keys(owners).forEach(function (ch) {
-      var who = owners[ch];
-      for (var i = 0; i < who.length; i++) {
-        for (var j = i + 1; j < who.length; j++) {
-          var a = spans[who[i]], b = spans[who[j]];
-          if (a.from < b.to && b.from < a.to) {        // windows overlap
-            var key = [actions[who[i]].getClip().name,
-                       actions[who[j]].getClip().name].sort().join("  +  ");
-            clashes[key] = (clashes[key] || 0) + 1;
-            n++;
-          }
-        }
-      }
+    // The prey's view: _SEEN, one normalised byte a vertex, 1 where the prey can
+    // see it (from COLOR_1's alpha in the export; the two colour layers were 12
+    // bytes a vertex over 5.5 M vertices, more than the Draco decoder could hold,
+    // so it failed and the page sat after the download). Red over the photo.
+    var fol = find(root, FOLIAGE);
+    if (fol) fol.traverse(function (m) {
+      var flag = m.isMesh && m.geometry.getAttribute("_seen");
+      if (!flag) return;
+      m.geometry.setAttribute("seen", flag);      // no leading underscore in GLSL
+      m.geometry.deleteAttribute("_seen");
+      m.material.onBeforeCompile = function (sh) {
+        sh.uniforms.uSeen = seenUniform;
+        sh.vertexShader = "attribute float seen;\nvarying float vSeen;\n" + sh.vertexShader
+          .replace("#include <begin_vertex>", "#include <begin_vertex>\n  vSeen = seen;");
+        sh.fragmentShader = "uniform float uSeen;\nvarying float vSeen;\n" + sh.fragmentShader
+          .replace("#include <map_fragment>", "#include <map_fragment>\n"
+            + "  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.35 + vec3(0.75, 0.05, 0.03), vSeen * uSeen);");
+      };
+      m.material.needsUpdate = true;
     });
-    if (!n) { console.log("no clip drives the same channel twice"); return; }
-    console.warn(n + " channel(s) driven by two clips at once - those nodes "
-      + "will show the average of both. Add one to CLIP_SKIP, or give them "
-      + "windows in CLIP_WINDOW:");
-    Object.keys(clashes).forEach(function (k) {
-      console.warn("  " + clashes[k] + " channel(s): " + k);
-    });
+    var vol = find(root, "PreyVisualVolume");
+    if (vol) { vol.material.depthWrite = false; vol.renderOrder = 3; }
   }
 
-  // Put every action exactly where the playhead says it should be. Driving the
-  // actions by absolute time rather than by accumulated deltas is what makes
-  // scrubbing repeatable: the pose at a given second is the same whether that
-  // second was reached by playing forwards, dragging backwards, or jumping.
-  // Each clip is clamped to its own span, so before it starts it contributes
-  // nothing and after it ends it holds its final pose, as Blender does.
+  // ------------------------------------------------------------------ clips
+  function setupClips(clips) {
+    mixer = new THREE.AnimationMixer(root);
+    function clip(name) {
+      var c = clips.find(function (k) { return k.name === name; });
+      if (!c) console.warn("no clip " + name);
+      return c;
+    }
+    function action(c) {
+      var a = mixer.clipAction(c);
+      a.setLoop(THREE.LoopOnce, 1);
+      a.clampWhenFinished = true;
+      a.play();
+      return a;
+    }
+    var attack = clip("ArmatureAction.001");
+    var prefix = armature.name + ".";
+    // The Armature's own tracks come in at full weight at the hand-off; only
+    // the bones crossfade, or the body would be averaged with its rest pose.
+    var bodyTracks = attack.tracks.filter(function (t) { return t.name.indexOf(prefix) === 0; });
+    var poseTracks = attack.tracks.filter(function (t) { return t.name.indexOf(prefix) !== 0; });
+    act.carrier = action(clip("Portia_merged_track"));
+    act.walk = action(clip("Portia_Walk"));
+    act.pose = action(new THREE.AnimationClip("attack_pose", attack.duration, poseTracks));
+    act.body = action(new THREE.AnimationClip("attack_body", attack.duration, bodyTracks));
+    var sfm = clip("Spider_bodyAction");
+    if (sfm) act.sfm = action(sfm);
+
+    tEnd = HANDOFF + attack.duration / (FILE_PER_S * ATTACK_RATE);
+    var carrierEnd = act.carrier.getClip().duration / FILE_PER_S;
+    tEnd = Math.max(tEnd, carrierEnd);
+
+    // the attack's first pose, in world space, for the run-in to the hand-off
+    act.body.time = 0; act.body.setEffectiveWeight(1);
+    mixer.update(0);
+    armature.updateMatrixWorld(true);
+    armature.matrixWorld.decompose(attackStart.p, attackStart.q, attackStart.s);
+
+    // the strike: the largest single step the attack moves the body
+    var pos = bodyTracks.find(function (t) { return /\.position$/.test(t.name); });
+    if (pos) {
+      var best = 0, at = 0, v = pos.values;
+      for (var i = 3; i < v.length; i += 3) {
+        var d = Math.hypot(v[i] - v[i - 3], v[i + 1] - v[i - 2], v[i + 2] - v[i - 1]);
+        if (d > best) { best = d; at = pos.times[i / 3]; }
+      }
+      strikeAt = HANDOFF + at / (FILE_PER_S * ATTACK_RATE);
+    }
+  }
+
+  var _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3();
+  function smooth(x) { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); }
+
   function applyTime(t) {
+    tNow = Math.min(Math.max(t, 0), tEnd);
+    var f = tNow * FILE_PER_S;
+    var a = Math.max(0, tNow - HANDOFF) * FILE_PER_S * ATTACK_RATE;
+    var w = smooth((tNow - HANDOFF) / CROSSFADE_S);
+    act.carrier.time = f;
+    if (act.sfm) act.sfm.time = f;
+    act.walk.time = Math.min(f, act.walk.getClip().duration);
+    act.pose.time = a;
+    act.body.time = a;
+    act.walk.setEffectiveWeight(1 - w);
+    act.pose.setEffectiveWeight(w);
+    act.body.setEffectiveWeight(tNow >= HANDOFF ? 1 : 0);
+    mixer.update(0);
+
+    if (tNow < HANDOFF) {
+      carrier.updateMatrixWorld(true);
+      _m.multiplyMatrices(carrier.matrixWorld, bind);
+      var k = smooth((tNow - (HANDOFF - CONVERGE_S)) / CONVERGE_S);
+      if (k > 0) {
+        _m.decompose(_p, _q, _s);
+        _p.lerp(attackStart.p, k);
+        _q.slerp(attackStart.q, k);
+        _s.lerp(attackStart.s, k);
+        _m.compose(_p, _q, _s);
+      }
+      _m.premultiply(parentInv);
+      _m.decompose(armature.position, armature.quaternion, armature.scale);
+    }
+    root.updateMatrixWorld(true);
+    updateBar();
+  }
+
+  // ------------------------------------------------------------------ panel
+  var seenUniform = { value: 0 };
+  function layerRow(label, checked, enabled) {
+    var row = document.createElement("label");
+    row.className = "row" + (enabled ? "" : " off");
+    var cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = checked && enabled;
+    cb.disabled = !enabled;
+    var span = document.createElement("span");
+    span.textContent = label;
+    span.title = label;
+    row.appendChild(cb);
+    row.appendChild(span);
+    return row;
+  }
+  function buildLayers() {
+    var box = document.getElementById("layers");
+    LAYERS.forEach(function (L) {
+      var objs = L.nodes.map(function (n) { return find(root, n); }).filter(Boolean);
+      var row = layerRow(L.label, L.on, objs.length > 0);
+      var cb = row.querySelector("input");
+      box.appendChild(row);
+      function set() {
+        objs.forEach(function (o) { o.visible = cb.checked; });
+        if (L.seen) seenUniform.value = cb.checked ? SEEN_STRENGTH : 0;
+      }
+      cb.addEventListener("change", set);
+      set();
+    });
+    HIDE_ALWAYS.forEach(function (n) { var o = find(root, n); if (o) o.visible = false; });
+  }
+
+  // ------------------------------------------------------------------ timeline
+  var scrub = document.getElementById("scrub");
+  function buildStrip() {
+    var strip = document.getElementById("strip");
+    // red starts at the strike itself (about 4 s after the csv's 2313 s), so
+    // Pitch + roll runs up to it
+    if (strikeAt != null) {
+      PHASES[PHASES.length - 2][2] = strikeAt;
+      PHASES[PHASES.length - 1][1] = strikeAt;
+    }
+    PHASES.forEach(function (p) {
+      var a = Math.min(p[1], tEnd), b = Math.min(p[2], tEnd);
+      if (b <= a) return;
+      var d = document.createElement("div");
+      d.style.width = (100 * (b - a) / tEnd) + "%";
+      d.style.background = p[3];
+      d.title = p[0];
+      strip.appendChild(d);
+    });
+    if (strikeAt != null) {
+      var el = document.createElement("div");
+      el.className = "mark";
+      el.style.left = (100 * strikeAt / tEnd) + "%";
+      el.innerHTML = "<b>strike</b>";
+      scrub.appendChild(el);
+    }
+  }
+  function mmss(t) {
+    t = Math.max(0, Math.round(t));
+    return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0");
+  }
+  function updateBar() {
+    document.getElementById("head").style.left = (100 * tNow / tEnd) + "%";
+    document.getElementById("clock").textContent = mmss(tNow) + " / " + mmss(tEnd);
+    var ph = PHASES.find(function (p) { return tNow >= p[1] && tNow < p[2]; });
+    document.getElementById("phase").textContent = ph ? ph[0] : "";
+  }
+  function seekFromEvent(e) {
+    var r = scrub.getBoundingClientRect();
+    applyTime(tEnd * Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)));
+  }
+  scrub.addEventListener("pointerdown", function (e) {
     if (!mixer) return;
-    switchFollowers(t);                    // before the mixer writes, not after
-    for (var i = 0; i < actions.length; i++) {
-      var a = actions[i];
-      var clipLen = a.getClip().duration || 0;
-      // clip time runs at `rate` per second of timeline, so the clip occupies
-      // clipLen / rate seconds and still clamps to its own full length
-      var local = (t - (offsets[i] || 0)) * (speeds[i] || 1);
-      // outside its window a clip contributes nothing at all, so a hand-off
-      // is a switch rather than a blend of the pose before and the pose after
-      var sp = spans[i];
-      // Ramp in and out instead of cutting. three.js normalises by the total
-      // weight on a property, so two clips at w and 1 - w give a true blend.
-      var w = 1;
-      if (sp.fadeIn) w = Math.min(w, (t - sp.from) / sp.fadeIn);
-      if (sp.fadeOut) w = Math.min(w, (sp.to - t) / sp.fadeOut);
-      w = w > 1 ? 1 : (w < 0 ? 0 : w);
-      a.weight = w;
-      a.enabled = w > 0 && local >= 0 && t >= sp.from && t < sp.to;
-      a.paused = false;
-      a.time = Math.max(0, Math.min(local, clipLen));
-    }
-    mixer.update(0);                       // apply, without advancing anything
-    holdFollowers(t);                      // after it, so it overrides the clip
-  }
-
-  // m:ss, with a tenth on the playhead so scrubbing a 12-minute clip is usable.
-  // Rounding before the split stops 59.97 s rendering as "0:60".
-  function mmss(t, dp) {
-    var p = Math.pow(10, dp);
-    var v = Math.round(Math.max(0, t) * p) / p;
-    var m = Math.floor(v / 60);
-    var sec = v - m * 60;
-    if (sec >= 60) { m += 1; sec = 0; }
-    return m + ":" + (sec < 10 ? "0" : "") + sec.toFixed(dp);
-  }
-
-  function updateReadout(t) {
-    timeEl.textContent = mmss(t, 2) + " / " + mmss(duration, 0);
-    scrub.value = String(duration > 0 ? Math.round((t / duration) * 1000) : 0);
-  }
-
-  playBtn.addEventListener("click", function () {
-    playing = !playing;
-    playBtn.textContent = playing ? "Pause" : "Play";
+    scrub.setPointerCapture(e.pointerId);
+    seekFromEvent(e);
+    scrub.onpointermove = seekFromEvent;
   });
-  // Move the playhead and show the result. Everything that jumps the clock -
-  // the scrubber, the step buttons, a saved view with a time on it - goes
-  // through here, so a given second always produces the same pose.
-  function seek(t) {
-    playhead = Math.min(Math.max(t, 0), duration);
-    applyTime(playhead);
-    updateReadout(playhead);
-  }
-  scrub.addEventListener("input", function () {
-    if (!mixer || duration <= 0) return;
-    seek((Number(scrub.value) / 1000) * duration);
-  });
+  scrub.addEventListener("pointerup", function () { scrub.onpointermove = null; });
 
-  // one frame back or forward, snapped to the keyframe grid, and pause. The
-  // top is held just short of the end, where the timeline wraps to 0.
-  function step(dir) {
-    if (!mixer || duration <= 0) return;
-    var k = Math.round((playhead - frameT0) / frameDt) + dir;
-    seek(Math.min(frameT0 + k * frameDt, duration - 1e-4));
-    playing = false;
-    playBtn.textContent = "Play";
+  var playBtn = document.getElementById("play");
+  function setPlaying(p) {
+    playing = p;
+    if (p && tNow >= tEnd) applyTime(0);
+    playBtn.textContent = p ? "Pause" : "Play";
   }
-  document.getElementById("stepBack").addEventListener("click", function () { step(-1); });
-  document.getElementById("stepFwd").addEventListener("click", function () { step(1); });
+  function step(dt) { if (!mixer) return; setPlaying(false); applyTime(tNow + dt); }
+  playBtn.addEventListener("click", function () { if (mixer) setPlaying(!playing); });
+  document.getElementById("stepBack").addEventListener("click", function () { step(-FRAME_S); });
+  document.getElementById("stepFwd").addEventListener("click", function () { step(FRAME_S); });
   window.addEventListener("keydown", function (e) {
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;   // sliders keep their own arrows
-    if (e.key === "ArrowLeft") { step(-1); e.preventDefault(); }
-    if (e.key === "ArrowRight") { step(1); e.preventDefault(); }
+    if (!mixer || e.target.tagName === "INPUT") return;
+    if (e.code === "Space") { e.preventDefault(); setPlaying(!playing); }
+    else if (e.code === "ArrowRight") step(e.shiftKey ? 10 : FRAME_S);
+    else if (e.code === "ArrowLeft") step(e.shiftKey ? -10 : -FRAME_S);
   });
-  var speedBtns = document.querySelectorAll("[data-speed]");
-  Array.prototype.forEach.call(speedBtns, function (b) {
+  document.querySelectorAll("#speeds .btn").forEach(function (b) {
     b.addEventListener("click", function () {
-      speed = Number(b.getAttribute("data-speed"));
-      // speed scales how fast the playhead advances; the mixer stays at 1 so
-      // that a given playhead value always maps to the same pose
-      Array.prototype.forEach.call(speedBtns, function (o) {
-        o.className = "btn ghost" + (o === b ? " active" : "");
-      });
+      speed = +b.dataset.speed;
+      document.querySelectorAll("#speeds .btn").forEach(function (o) { o.classList.toggle("active", o === b); });
     });
   });
-  document.getElementById("codemix").addEventListener("change", function () {
-    applyCoding(Number(this.value) / 100);      // on release: a full pass over 5.5M verts
-  });
 
-  // ---- object list, grouped by what the parts of the reconstruction are.
-  // Each group has a master checkbox and one row per exported object, named as
-  // it is named in the scene.
-  // The route group is tested BEFORE the phases, because
-  // "Portia_blended_curve_visible" matches both patterns and groupOf takes the
-  // first hit. Narrowing the phase test instead would mean remembering to
-  // narrow it again for every status the visibility script learns to emit.
-  var GROUPS = [
-    // `single` draws one row for the whole group instead of a row per
-    // object. The four eye fields are one thing to a reader - nobody wants
-    // the anterior-lateral field on and the posterior-median off - and
-    // offering that combination only invited a meaningless picture.
-    { id: "volumes", label: "Visual volumes", single: true,
-      test: function (n) { return /^PreyFOV/i.test(n) || /^PreyEyes/i.test(n); } },
-    { id: "foliage", label: "Foliage, seen and not seen",
-      test: function (n) { return /smoothened_edges/i.test(n); } },
-    { id: "route", label: "What the prey can see of her route",
-      test: function (n) { return /^Portia_blended_curve_/i.test(n); } },
-    // The suffix has to be a phase, not just anything under the
-    // Portia_blended_ prefix: that prefix also covers Portia_blended_curve
-    // and Portia_blended_carrier, and the carrier is what the Armature hangs
-    // off for the whole approach. Sweeping it into a visibility group once
-    // took the spider off the screen with it.
-    { id: "phases", label: "Trajectory phases",
-      test: function (n) {
-        return /^Portia_blended_/i.test(n)
-          && !/^Portia_blended(_curve|_carrier)?$/i.test(n);
-      } },
-    { id: "trajectory", label: "Portia's trajectory",
-      test: function (n) { return /^Spider_Trajectory/i.test(n) || /^Trajectory_/i.test(n); } },
+  // ------------------------------------------------------------------ camera
+  var modeBtns = { orbit: null, follow: document.getElementById("vFollow"), prey: document.getElementById("vPrey") };
+  function setMode(m) {
+    if (m !== "fixed") leaveFigure();
+    camMode = m;
+    Object.keys(modeBtns).forEach(function (k) { if (modeBtns[k]) modeBtns[k].classList.toggle("active", k === m); });
+    controls.enabled = m !== "prey" && m !== "fixed";
+    if (m === "follow" && spiderPoint) {
+      spiderPoint.getWorldPosition(lastSpider);
+      var off = camera.position.clone().sub(controls.target);
+      var r = Math.min(off.length(), 40);
+      controls.target.copy(lastSpider);
+      camera.position.copy(lastSpider).add(off.setLength(r));
+    }
+  }
+  function fit() { showFigure(OVERVIEW); }
+  var fitBtn = document.getElementById("vFit");
+  fitBtn.title = "Fig 1: PlaneCamera, looking at the web plane";
+  fitBtn.addEventListener("click", fit);
+  // ---- Attack: ATTACK_VIEW.before seconds ahead of the strike, from just in
+  // front of the web near Argiope and out to the right, looking at Portia and
+  // orbiting her. "Front" and "right" are as the Overview (Fig 1) camera sees
+  // the web: front is its side of the web, right is its screen right. Distances
+  // in scene units (mm), measured from the centre of the Argiope point cloud.
+  var ATTACK_VIEW = { before: 1.0, front: 20, right: 12, up: 4 };
+  var preyBox = new THREE.Box3();
+  function showAttack() {
+    if (!mixer || strikeAt == null) return;
+    setPlaying(false);
+    applyTime(strikeAt - ATTACK_VIEW.before);
+    setMode("orbit");
+    var p0 = new THREE.Vector3().fromArray(OVERVIEW.position);
+    var fwd = new THREE.Vector3().fromArray(OVERVIEW.target).sub(p0).normalize();
+    var up = new THREE.Vector3().fromArray(OVERVIEW.up).normalize();
+    var right = fwd.clone().cross(up).normalize();
+    var prey = preyBox.isEmpty() ? find(root, "Goal").getWorldPosition(new THREE.Vector3())
+                                 : preyBox.getCenter(new THREE.Vector3());
+    var portia = spiderPoint.getWorldPosition(new THREE.Vector3());
+    camera.position.copy(prey)
+      .addScaledVector(fwd, -ATTACK_VIEW.front)
+      .addScaledVector(right, ATTACK_VIEW.right)
+      .addScaledVector(up, ATTACK_VIEW.up);
+    controls.target.copy(portia);
+    lastSpider.copy(portia);
+    controls.update();
+    markDirty();
+  }
+  document.getElementById("vAttack").addEventListener("click", showAttack);
+  modeBtns.follow.addEventListener("click", function () { setMode(camMode === "follow" ? "orbit" : "follow"); });
+  modeBtns.prey.addEventListener("click", function () { setMode(camMode === "prey" ? "orbit" : "prey"); });
+
+  // The figure cameras, from glb_export_ready_gait_blended.blend (parented to
+  // Camera_Prop.001), in glTF's Y-up world. That file and the current scene
+  // share a frame - the same scan vertices land at the same world positions -
+  // so these are the figures' viewpoints here too; only the prey objects were
+  // re-placed since (by ~3 units). `up` keeps each camera's roll and `hfov` its
+  // horizontal field of view (the renders were 1920 x 1080, sensor fit AUTO),
+  // so the framing matches the figure across the width at any window shape.
+  // There is no Fig 3A camera in either .blend.
+  // Fig 1 is PlaneCamera in aligned_11444_autosave_animation.blend, a child of
+  // PlaneCamera_Rig on the web, aimed at the rig from 468 units: 74 mm lens on
+  // a portrait 1080 x 1920 render, so its VERTICAL field of view is the one to
+  // keep (`vfov`). (The gait file's camera named Fig1 is a different view.)
+  // Fig 1's camera is the Overview button, and where the page opens.
+  var OVERVIEW = { name: "Overview", position: [427.0452, 20.5508, -248.1759],
+    target: [418.3637, 21.3296, -243.2743], up: [0.0678, 0.997, -0.0383], vfov: 46.77 };
+  var FIGURES = [
+    { name: "Fig 3C", position: [42.8374, 31.956, 20.9418], target: [39.1765, 22.8492, 22.8557],
+      up: [-0.8071, 0.4131, 0.4219], hfov: 76.09 },
+    { name: "Fig 3D back", note: "Back_Camera_Fig_D (hidden from render in Blender)",
+      position: [-24.4835, 46.9336, 103.7819], target: [-20.1608, 44.3261, 95.1496],
+      up: [0.1167, 0.9654, -0.2331], hfov: 69.38 }
   ];
-
-  // what each exported object is called in the panel; the exported name stays
-  // on the row as a tooltip
-  // The eight phase tubes come from blender_mesh_blended_path.py, named
-  // Portia_blended_<Phase> after its PHASES table, so the two files have to
-  // agree: rename a phase there and its row here falls back to the raw name.
-  var LABELS = {
-    "Portia_blended_Initial_crawl": "Initial crawl",
-    "Portia_blended_Aggressive_mimicry": "Aggressive mimicry",
-    "Portia_blended_Reroute": "Reroute",
-    "Portia_blended_Hesitant_jump": "Hesitant jump",
-    "Portia_blended_Crawl_behind_leaf": "Crawl behind leaf",
-    "Portia_blended_Saltatory_stalk": "Saltatory stalk",
-    "Portia_blended_Roll_and_pitch": "Roll and pitch body for attack",
-    "Portia_blended_curve_visible": "Where the prey can see her",
-    "Portia_blended_curve_out_of_field": "Outside the prey's visual field",
-    "Portia_blended_curve_occluded": "Hidden behind foliage",
-    "Portia_blended_curve_beyond_range": "Too far to resolve",
-    "Portia_blended_curve_not_scored": "Not scored",
-    "Spider_Trajectory": "Portia's trajectory",
-    "9_mil_smoothened_edges_+_thickened": "Foliage",
-    "9_mil_smoothened_edges_+_thickened_prey_seen": "Foliage with visual fields"
-  };
-
-  // always on screen, so a switch for them would only invite turning the
-  // reconstruction off
-  // Portia_-_Merged.011 was in an older export and is not in portia_gait.glb
-  // at all, so the entry below did nothing; kept only as a reminder of what
-  // the name used to be. The three bodies this file does carry are
-  // Portia_-_Merged.004, Portia_-_Merged.006 and "Portia - Merged.001".
-  var NOT_TOGGLEABLE = ["Prey_Position", "Web_Cylinders"];
-
-  // Switched off as the file loads and kept out of the panel, so they cannot
-  // be turned back on.
-  //
-  // Empty against portia_gait_slim.glb: the five objects that used to be
-  // listed here - the two duplicate Portia bodies with no armature, the two
-  // Portia_path_prey_* lines and the Prey_Position marker - are gone from the
-  // model itself now, cut by prune_glb.py. Hiding a node still ships its
-  // mesh; those five were 258 MB of the 869. Naming them here against the
-  // slim model would only log "no object named" each time.
-  //
-  // Against the full portia_gait.glb they are still present, so switch
-  // MODEL_URL back and restore:
-  //   ["Portia_-_Merged.004", "Portia_-_Merged.006", "Portia_path_prey_seen",
-  //    "Portia_path_prey_unseen", "Prey_Position"]
-  // Hidden AND kept out of the panel, so it cannot be switched back on.
-  // The eating phase is still in the .glb - blender_mesh_blended_path.py
-  // still generates it - so this is where it goes until that script is
-  // changed and the model rebuilt.
-  var HIDE_ALWAYS = ["Portia_blended_Eating"];
-
-  // Ignore every camera baked into the file: no camera dropdown, always free
-  // orbit. The file carries a dozen - Camera, Camera.006, Camera.011,
-  // Spider_View, Portia_eye_camera, the Portia_View_f* stills and
-  // Back_Camera_Fig_D - and several are animated by the Scene clip, so
-  // picking one hands the view to those keyframes and the orbit controls
-  // stand down until you switch back.
-  //
-  // They are ignored rather than detached, for the same reason the bodies
-  // above are hidden rather than removed: the clip drives several of them and
-  // pulling them out of the graph would leave those tracks unbound.
-  var USE_BAKED_CAMERAS = false;
-
-  // the order the hunt happens in, which is not the order the file lists
-  var ORDER = ["Portia_blended_Initial_crawl",
-               "Portia_blended_Aggressive_mimicry",
-               "Portia_blended_Reroute",
-               "Portia_blended_Hesitant_jump",
-               "Portia_blended_Crawl_behind_leaf",
-               "Portia_blended_Saltatory_stalk",
-               "Portia_blended_Roll_and_pitch"];
-
-  var listEl = document.getElementById("objects");
-  var toggles = [];                 // {box, obj, group}
-  var groupBoxes = {};              // group id -> master checkbox
-
-  function hasMesh(o) {
-    var found = false;
-    o.traverse(function (d) { if (d.isMesh) found = true; });
-    return found;
-  }
-
-  // A node that is only a container for meshes (PreyEyes holding the four eye
-  // volumes) is listed as its children, so each volume gets its own switch.
-  // Empties and curve-only nodes have nothing to show and are left out.
-  function renderableUnits(list) {
-    var out = [];
-    list.forEach(function (o) {
-      if (o.isLight || o.isCamera || !hasMesh(o)) return;
-      if (!o.isMesh && o.children.length) {
-        o.children.forEach(function (c) { if (hasMesh(c)) out.push(c); });
-      } else {
-        out.push(o);
-      }
-    });
-    return out;
-  }
-
-  function groupOf(name) {
-    for (var i = 0; i < GROUPS.length; i++) if (GROUPS[i].test(name)) return GROUPS[i].id;
-    return "other";
-  }
-
-  function setGroup(id, on) {
-    toggles.forEach(function (t) {
-      if (t.group !== id) return;
-      t.obj.visible = on;
-      t.box.checked = on;
-    });
-    syncGroupBoxes();
-  }
-
-  function syncGroupBoxes() {
-    GROUPS.forEach(function (g) {
-      var box = groupBoxes[g.id];
-      if (!box) return;
-      var mine = toggles.filter(function (t) { return t.group === g.id; });
-      var on = mine.filter(function (t) { return t.obj.visible; }).length;
-      box.checked = on > 0;
-      box.indeterminate = on > 0 && on < mine.length;
-    });
-  }
-
-  function buildObjectList(objects) {
-    listEl.innerHTML = "";
-    toggles = [];
-    groupBoxes = {};
-    var units = renderableUnits(objects).filter(function (o) {
-      return NOT_TOGGLEABLE.indexOf(o.name) === -1;
-    });
-
-    GROUPS.forEach(function (g) {
-      var mine = units.filter(function (o) { return groupOf(o.name || "") === g.id; });
-      if (!mine.length) return;
-      mine.sort(function (a, b) {
-        var ia = ORDER.indexOf(a.name), ib = ORDER.indexOf(b.name);
-        if (ia === -1 && ib === -1) return 0;
-        return ia === -1 ? 1 : ib === -1 ? -1 : ia - ib;
-      });
-
-      var wrap = document.createElement("div");
-      wrap.className = "group";
-      var head = document.createElement("label");
-      head.className = "row head";
-      var master = document.createElement("input");
-      master.type = "checkbox";
-      master.id = "grp_" + g.id;
-      master.checked = true;
-      var htext = document.createElement("span");
-      htext.textContent = g.label;
-      head.appendChild(master);
-      head.appendChild(htext);
-      wrap.appendChild(head);
-      groupBoxes[g.id] = master;
-      master.addEventListener("change", function () {
-        setGroup(g.id, master.checked);
-        // turning a volume on is meaningless without the foliage it is cast
-        // against, so bring that back with it
-        if (g.id === "volumes" && master.checked) setGroup("foliage", true);
-      });
-
-      if (g.single) {
-        // every member answers to the one checkbox; the exported names go on
-        // the row as a tooltip so it is still possible to see what it covers
-        head.title = mine.map(function (o) { return o.name; }).join(", ");
-        mine.forEach(function (obj) {
-          toggles.push({ box: master, obj: obj, group: g.id });
-        });
-        listEl.appendChild(wrap);
-        return;
-      }
-
-      var kids = document.createElement("div");
-      kids.className = "kids";
-      mine.forEach(function (obj, i) {
-        var label = LABELS[obj.name] || obj.name || ("object " + (i + 1));
-        var row = document.createElement("label");
-        row.className = "row";
-        var box = document.createElement("input");
-        box.type = "checkbox";
-        box.checked = obj.visible;
-        box.id = "vis_" + g.id + "_" + i;
-        var text = document.createElement("span");
-        text.textContent = label;
-        text.title = obj.name || label;        // the exported name on hover
-        box.addEventListener("change", function () {
-          obj.visible = box.checked;
-          if (g.id === "volumes" && box.checked) setGroup("foliage", true);
-          syncGroupBoxes();
-        });
-        row.appendChild(box);
-        row.appendChild(text);
-        kids.appendChild(row);
-        toggles.push({ box: box, obj: obj, group: g.id });
-      });
-      wrap.appendChild(kids);
-      listEl.appendChild(wrap);
-    });
-
-    syncGroupBoxes();
-    document.getElementById("panel").hidden = toggles.length === 0;
-  }
-
-  function setAll(on) {
-    toggles.forEach(function (t) { t.box.checked = on; t.obj.visible = on; });
-    syncGroupBoxes();
-  }
-  document.getElementById("camsel").addEventListener("change", function () {
-    useCamera(Number(this.value));
-  });
-  document.getElementById("allOn").addEventListener("click", function () { setAll(true); });
-  document.getElementById("allOff").addEventListener("click", function () { setAll(false); });
-
-  // ---- saved viewpoints, offered as buttons beside the title. A view with a
-  // time also moves the timeline there and pauses. To add one, orbit to it and
-  // press V: the view is copied to the clipboard in this form, ready to paste
-  // here (drop the time if the view shouldn't move the clock). An optional
-  // note shows when the pointer is over the button.
-  // `fov` is the vertical field of view in degrees; leaving it out means
-  // DEFAULT_FOV. A view that came from a real camera has to carry it, because
-  // the same position at a different focal length is a different picture.
   var DEFAULT_FOV = 45;
-  var VIEWS = [
-    { name: "Overview", position: [203.0759, 38.7702, -30.4058], target: [-12.6291, 18.5275, 3.2557] },
-    { name: "Attack", note: "The attack, looking up from below to the prey",
-      position: [-17.4385, 107.0439, -18.6272], target: [-0.055, 55.7067, -9.9641], time: 2301.56 },
-    // Lifted from Fig3_C and Fig3_D_Actual in portia_gait_slim.glb, which
-    // still carries the scene's cameras. Both frame the approach.
-    { name: "Fig 3C", note: "The Fig 3C camera, from the Blender scene",
-      position: [42.8374, 31.9560, 20.9418], target: [25.6262, -10.8579, 29.9396],
-      fov: 47.52 },
-    { name: "Fig 3D", note: "The Fig 3D 'actual' camera, from the Blender scene",
-      position: [-22.8706, 73.3027, 114.4960], target: [29.5695, 10.7020, 4.0568],
-      fov: 44.10 },
-  ];
+  var figure = null;          // the figure view being shown, or null
 
-  // a camera move in progress, eased along a straight line; dragging cancels it
-  var flight = null;
-  controls.addEventListener("start", function () { flight = null; });
-
-  function goTo(view, animate) {
-    if (view.time != null && mixer && duration > 0) {
-      seek(view.time);
-      playing = false;
-      playBtn.textContent = "Play";
-    }
-    var p = new THREE.Vector3().fromArray(view.position);
-    var t = new THREE.Vector3().fromArray(view.target);
-    var fov = view.fov || DEFAULT_FOV;
-    if (!animate) {
-      flight = null;
-      camera.position.copy(p);
-      controls.target.copy(t);
-      if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
-      controls.update();
-      return;
-    }
-    // the field of view travels with the move rather than snapping first,
-    // which would read as a zoom lurch before the camera had gone anywhere
-    flight = { p0: camera.position.clone(), t0: controls.target.clone(),
-               p1: p, t1: t, f0: camera.fov, f1: fov,
-               start: performance.now(), ms: 900 };
+  // the vertical fov for this window that keeps the figure's fitted dimension
+  function fovFor(f) {
+    if (f.vfov) return f.vfov;
+    return 2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(THREE.MathUtils.degToRad(f.hfov) / 2) / camera.aspect));
   }
-
-  function fly() {
-    if (!flight) return;
-    var u = Math.min((performance.now() - flight.start) / flight.ms, 1);
-    var e = u < 0.5 ? 2 * u * u : 1 - Math.pow(2 - 2 * u, 2) / 2;   // ease in and out
-    camera.position.lerpVectors(flight.p0, flight.p1, e);
-    controls.target.lerpVectors(flight.t0, flight.t1, e);
-    if (flight.f0 !== flight.f1) {
-      camera.fov = flight.f0 + (flight.f1 - flight.f0) * e;
-      camera.updateProjectionMatrix();
-    }
-    if (u === 1) flight = null;
+  function showFigure(f) {
+    setMode("fixed");
+    figure = f;
+    var p = new THREE.Vector3().fromArray(f.position);
+    var fwd = new THREE.Vector3().fromArray(f.target).sub(p).normalize();
+    camera.position.copy(p);
+    camera.up.fromArray(f.up);
+    camera.lookAt(p.clone().add(fwd));
+    camera.fov = fovFor(f);
+    camera.updateProjectionMatrix();
+    // what orbiting will circle once you drag: the scene's centre, projected
+    // onto the line of sight, so the hand-over does not swing the view
+    var c = fitBox.getCenter(new THREE.Vector3());
+    var d = Math.max(1, c.sub(p).dot(fwd));
+    controls.target.copy(p).addScaledVector(fwd, d);
+    figBtns.forEach(function (b) { b.classList.toggle("active", b.textContent === f.name); });
+    fitBtn.classList.toggle("active", f === OVERVIEW);
+    markDirty();
   }
-
-  var viewsEl = document.getElementById("views");
-  VIEWS.forEach(function (v) {
+  function leaveFigure() {
+    if (!figure) return;
+    figure = null;
+    figBtns.forEach(function (b) { b.classList.remove("active"); });
+    fitBtn.classList.remove("active");
+    camera.up.set(0, 1, 0);           // OrbitControls assumes Y up
+    camera.fov = DEFAULT_FOV;
+    camera.updateProjectionMatrix();
+    camMode = "orbit";
+    controls.enabled = true;
+  }
+  var figBtns = FIGURES.map(function (f) {
     var b = document.createElement("button");
     b.type = "button";
     b.className = "btn ghost";
-    b.textContent = v.name;
-    if (v.note) b.title = v.note;               // shown on hover
-    b.addEventListener("click", function () {
-      if (content.children.length) goTo(v, true);
-    });
-    viewsEl.appendChild(b);
+    b.textContent = f.name;
+    if (f.note) b.title = f.note;
+    b.addEventListener("click", function () { showFigure(f); });
+    document.getElementById("figs").appendChild(b);
+    return b;
   });
+  // dragging or scrolling the view hands it back to the orbit camera
+  renderer.domElement.addEventListener("pointerdown", function () { if (figure) leaveFigure(); }, true);
+  renderer.domElement.addEventListener("wheel", function () { if (figure) leaveFigure(); }, true);
 
-  // V shows the current view, and copies it, in the form VIEWS takes
-  var viewMsgTimer = null;
-  window.addEventListener("keydown", function (e) {
-    if ((e.key !== "v" && e.key !== "V") || e.metaKey || e.ctrlKey || e.altKey) return;
-    if (!content.children.length) return;          // nothing loaded yet
-    function round(v) { return v.toArray().map(function (x) { return +x.toFixed(4); }); }
-    var text = '{ name: "New view", position: ' + JSON.stringify(round(camera.position))
-             + ", target: " + JSON.stringify(round(controls.target))
-             + (camera.fov !== DEFAULT_FOV
-                 ? ", fov: " + camera.fov.toFixed(2) : "")
-             + ", time: " + playhead.toFixed(2) + " },";
-    console.log(text);
-    function show(msg) {
-      status(msg);
-      clearTimeout(viewMsgTimer);
-      viewMsgTimer = setTimeout(function () { status(""); }, 6000);
+  var _sp = new THREE.Vector3();
+  function updateCamera() {
+    if (!spiderPoint) return;
+    spiderPoint.getWorldPosition(_sp);
+    if (camMode === "follow") {
+      var d = _sp.clone().sub(lastSpider);
+      controls.target.add(d);
+      camera.position.add(d);
+    } else if (camMode === "prey" && preyEyes) {
+      preyEyes.getWorldPosition(camera.position);
+      camera.lookAt(_sp);
     }
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(
-        function () { show("View copied to the clipboard:\n" + text); },
-        function () { show("View (also in the browser console):\n" + text); });
-    } else {
-      show("View (also in the browser console):\n" + text);
-    }
+    lastSpider.copy(_sp);
+    // near / far from the viewing distance, so millimetre detail keeps its depth precision
+    var dist = camMode === "prey" ? camera.position.distanceTo(_sp) : camera.position.distanceTo(controls.target);
+    camera.near = Math.max(0.01, dist / 500);
+    camera.far = dist * 50 + 2000;
+    camera.updateProjectionMatrix();
+  }
+
+  // ------------------------------------------------------------------ loop
+  // Draw only when something changed: while playing, while the view moves
+  // (including the damping glide after a drag), and after any panel input.
+  // Paused and untouched, the GPU is left alone.
+  var dirty = 2;
+  function markDirty() { dirty = 2; }
+  ["input", "change", "click", "keydown", "pointermove", "wheel"].forEach(function (ev) {
+    window.addEventListener(ev, markDirty, { passive: true });
   });
-
-  // ---- framing
-  function frame() {
-    var box = new THREE.Box3().setFromObject(content);
-    if (box.isEmpty()) return;
-    var size = box.getSize(new THREE.Vector3());
-    var centre = box.getCenter(new THREE.Vector3());
-    var radius = Math.max(size.x, size.y, size.z) * 0.5 || 1;
-    var dist = radius / Math.sin((camera.fov * Math.PI) / 360) * 1.5;
-    controls.target.copy(centre);
-    camera.position.copy(centre).add(
-      new THREE.Vector3(0.75, 0.55, 1).normalize().multiplyScalar(dist)
-    );
-    // the bounding box of a 40-metre plant scan is not a view of a hunt; the
-    // first saved view is, so use it when there is one. near/far are still
-    // taken from the box, because they have to cover it either way.
-    if (VIEWS.length) goTo(VIEWS[0], false);
-    camera.near = Math.max(dist / 1000, 0.01);
-    camera.far = dist * 40;
-    camera.updateProjectionMatrix();     // after goTo, so a view's fov stands
-    controls.update();
-    ground.position.y = box.min.y;
-    grid.position.y = box.min.y;
-    var step = Math.pow(10, Math.round(Math.log10(radius)) - 1) * 10;
-    grid.scale.setScalar(Math.max(step, 0.01) / 1);
-  }
-
-
-  function clearContent() {
-    content.traverse(function (o) {
-      if (o.isMesh) {
-        o.geometry.dispose();
-        (Array.isArray(o.material) ? o.material : [o.material]).forEach(function (m) {
-          if (m) m.dispose();
-        });
-      }
-    });
-    content.clear ? content.clear() : (content.children.length = 0);
-  }
-
-
-  // ---- showing the photo and the seen/not-seen coding at the same time.
-  // Vertex colours multiply into the base colour, so the raw code colour over a
-  // brown bark photo just comes out dark brown. Normalising each code colour so
-  // its brightest channel is 1 fixes that: unseen grey becomes white and leaves
-  // the photo alone, while a seen patch keeps its hue at full brightness. The
-  // slider fades between white and that hue.
-  //
-  // Done on the CPU into the colour attribute rather than in a patched shader,
-  // because a shader that fails to compile makes the mesh vanish with nothing
-  // on screen to say why.
-  // Multiplying can only darken, which is why a blue code over brown bark came
-  // out nearly black: the photo has no blue to keep. So the material is given a
-  // gain, and unseen foliage is written at 1/gain so it still renders as the
-  // plain photo. A seen patch is written at full hue, which the gain then lifts
-  // above the photo instead of below it.
-  var CODE_GAIN = 5;
-  var WEB_BRIGHTNESS = 0.85;   // base grey of the web strands, was 0.06
-  var WEB_GLOW = 0.45;         // emissive, so thin strands read without lighting
-  var codedMeshes = [];
-
-  function prepareCoding(mesh) {
-    var src = mesh.geometry.attributes.color_1;
-    var denom = src.array instanceof Uint8Array ? 255
-              : src.array instanceof Uint16Array ? 65535 : 1;
-    mesh.userData.codeSrc = src;
-    mesh.userData.codeDenom = denom;
-    mesh.geometry.setAttribute("color",
-      new THREE.BufferAttribute(new Uint8Array(src.count * 3), 3, true));
-    codedMeshes.push(mesh);
-  }
-
-  function applyCoding(k) {
-    codedMeshes.forEach(function (mesh) {
-      var src = mesh.userData.codeSrc;
-      var d = mesh.userData.codeDenom;
-      var dst = mesh.geometry.attributes.color;
-      var out = dst.array;
-      var n = src.count;
-      var base = 1 / CODE_GAIN;                 // renders as the untouched photo
-      for (var i = 0; i < n; i++) {
-        var r = src.getX(i) / d, g = src.getY(i) / d, b = src.getZ(i) / d;
-        var mx = Math.max(r, Math.max(g, b));
-        var mn = Math.min(r, Math.min(g, b));
-        // the unseen marker is a neutral grey, so near-zero saturation means
-        // "not seen" whatever its brightness
-        if (mx < 1e-6 || (mx - mn) / mx < 0.12) {
-          r = g = b = base;
-        } else {
-          r = base + k * (r / mx - base);
-          g = base + k * (g / mx - base);
-          b = base + k * (b / mx - base);
-        }
-        out[i * 3] = Math.round(255 * r);
-        out[i * 3 + 1] = Math.round(255 * g);
-        out[i * 3 + 2] = Math.round(255 * b);
-      }
-      dst.needsUpdate = true;
-    });
-  }
-
-  // Let the CPU-side copy of a buffer go once the GPU has it. 'Portia -
-  // Merged.001' alone is 4.3M vertices and the foliage another 2.5M, which is
-  // most of a gigabyte held twice over on a tab that has just downloaded
-  // 459 MB. The colour layers are kept, because the visual-range slider
-  // rewrites them on every change.
-  function dropArray() { this.array = null; }
-  function freeAfterUpload(geometry) {
-    Object.keys(geometry.attributes).forEach(function (name) {
-      if (name !== "color" && name !== "color_1") {
-        geometry.attributes[name].onUpload(dropArray);
-      }
-    });
-    if (geometry.index) geometry.index.onUpload(dropArray);
-  }
-
-  // ---- loading a file
-  var loader = new THREE.GLTFLoader();
-  function adopt(gltf, name) {
-    clearContent();
-    codedMeshes = [];
-    var hidden = [];
-    gltf.scene.traverse(function (o) {
-      // Nothing arrives hidden. An object switched off in Blender exports with
-      // visible false, and a skinned or travelling mesh can also be culled on
-      // its bind-pose bounds and vanish at some camera angles; neither should
-      // decide what the viewer shows, so both are overridden here and the
-      // panel's checkboxes then read true because they are built afterwards.
-      if (!o.visible) { hidden.push(o.name || o.type); o.visible = true; }
-      if (o.isMesh) {
-        o.frustumCulled = false;
-        o.castShadow = true;
-        o.receiveShadow = true;
-        freeAfterUpload(o.geometry);
-      }
-      // glTF shades from COLOR_0 only, and here that layer is pure white. The
-      // seen/not-seen coding is in a second layer, which arrives as COLOR_1 and
-      // every standard viewer ignores, so build the colour attribute from it.
-      // the web exports at 6% grey, which disappears against a black viewport;
-      // the strands are too thin to catch much light, so lift it with emissive
-      if (o.isMesh && /^Web_Cylinders/i.test(o.name || "")) {
-        o.material = o.material.clone();
-        o.material.color.setScalar(WEB_BRIGHTNESS);
-        o.material.emissive = new THREE.Color(WEB_GLOW, WEB_GLOW, WEB_GLOW);
-        o.material.needsUpdate = true;
-      }
-      if (o.isMesh && o.geometry.attributes.color_1) {
-        o.material = o.material.clone();
-        o.material.vertexColors = true;
-        o.material.color.setScalar(CODE_GAIN);   // headroom for the hue to brighten
-        o.material.needsUpdate = true;
-        prepareCoding(o);
-      }
-    });
-    if (hidden.length) console.log("made visible on load: " + hidden.join(", "));
-    applyCoding(Number(document.getElementById("codemix").value) / 100);
-    content.add(gltf.scene);
-    HIDE_ALWAYS.forEach(function (name) {
-      var obj = findObject(gltf.scene, name);
-      if (!obj) { console.warn("HIDE_ALWAYS: no object named " + name); return; }
-      obj.visible = false;
-      obj.traverse(function (d) { d.visible = false; });
-      // keep it out of the panel, by the name the scene actually gave it
-      if (NOT_TOGGLEABLE.indexOf(obj.name) === -1) NOT_TOGGLEABLE.push(obj.name);
-      console.log("hidden always: " + name + " (scene name \"" + obj.name + "\")");
-    });
-
-    var top = gltf.scene.children.slice();
-    while (top.length === 1 && top[0].children.length > 1) top = top[0].children.slice();
-    // The file carries the foliage twice as coincident geometry - once plain,
-    // once with the seen/not-seen colouring in COLOR_1 - and two surfaces in
-    // the same place z-fight into a speckled mess. They are an either/or, so
-    // one starts switched off; the panel's "Foliage with visual fields" box
-    // brings it back. This runs before the panel is built so the checkboxes
-    // come up matching what is actually on screen.
-    START_HIDDEN.forEach(function (name) {
-      var group = null;
-      for (var i = 0; i < GROUPS.length; i++) {
-        if (GROUPS[i].id === name) group = GROUPS[i];
-      }
-      if (group) {
-        var n = 0;
-        gltf.scene.traverse(function (o) {
-          // never an empty. Hiding something with nothing to show cannot do
-          // what was asked and can take its children down with it - three.js
-          // stops at the first invisible object when it walks the scene.
-          if (o.name && group.test(o.name) && hasMesh(o)) {
-            o.visible = false;
-            n++;
-          }
-        });
-        console.log("starts hidden: everything in \"" + group.label
-          + "\" (" + n + " object(s))");
-        return;
-      }
-      var obj = findObject(gltf.scene, name);
-      if (obj) { obj.visible = false; console.log("starts hidden: " + name); }
-      else console.warn("START_HIDDEN: no object or group called " + name);
-    });
-    buildObjectList(top);                  // before re-parenting, so the panel
-    applyParenting(gltf.scene);            // still lists the moved object
-    document.getElementById("codemixWrap").hidden = codedMeshes.length === 0;
-    useClips(gltf.scene, gltf.animations || []);
-    buildFollowers(gltf.scene);    // after useClips, so t = 0 is already applied
-    applyTime(playhead);           // and again, now that there are followers to place
-    buildReveals(gltf.scene);      // after useClips, which is what sets duration
-    collectCameras(gltf.scene);
-    frame();
-    status("");
-    playing = true;
-    playBtn.textContent = "Pause";
-  }
-
-  function failed(name, err) {
-    var why = err && err.message ? err.message : "unsupported or missing file";
-    if (decoderFailed) {
-      status("Could not load the Draco decoder from " + DRACO_PATH + " — "
-        + (decoderFailed.message || decoderFailed)
-        + "\nThe model itself may be fine. That folder needs "
-        + "draco_wasm_wrapper.js, draco_decoder.wasm and draco_decoder.js "
-        + "beside this page.");
-      console.error("draco decoder:", decoderFailed);
-      return;
-    }
-    status("Could not read " + name + " — " + why
-      + "\nIt downloaded; this is a parsing problem. The browser console has "
-      + "the full error.");
-    console.error("parsing " + name + ":", err);
-  }
-
-
-  // Where the Draco decoder lives. "draco/" is a folder beside this page
-  // holding draco_wasm_wrapper.js, draco_decoder.wasm and draco_decoder.js,
-  // about 1.1 MB in all.
-  //
-  // Served from here rather than from a CDN because the model is served from
-  // here: a page that loads its own 117 MB file off localhost should not then
-  // fail because jsdelivr is slow, blocked or unreachable, and "Failed to
-  // fetch" looks identical whichever file could not be got. Point it back at
-  // "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/" if
-  // the folder is ever not shipped alongside the page - and note that the
-  // bundler has to copy it, since it only knows about the .glb.
-  var DRACO_PATH = "draco/";
-
-  function loadUrl(url) {
-    status("Loading …");
-    // One worker, not one per core: the decoder is only in the way of the
-    // first frame, and a dozen workers each wanting a slice of a half-gigabyte
-    // file is how a tab runs out of memory before it draws anything.
-    var draco = THREE.DRACOLoader ? new THREE.DRACOLoader() : null;
-    if (draco) {
-      draco.setDecoderPath(DRACO_PATH);
-      draco.setWorkerLimit(1);
-      loader.setDRACOLoader(draco);
-      // Fetched now rather than when the first compressed primitive turns up,
-      // so that a decoder that cannot be got is reported as a decoder - three
-      // would otherwise surface it as a failure to load the model.
-      draco.preload();
-      if (draco.decoderPending && draco.decoderPending.catch) {
-        draco.decoderPending.catch(function (e) {
-          decoderFailed = e;
-        });
-      }
-    }
-    // XMLHttpRequest rather than loader.load, which wraps the same thing but
-    // hands back a ProgressEvent with no status on it. Knowing whether the
-    // model arrived at all is the difference between a server problem and a
-    // parse problem, and the two look identical from inside GLTFLoader.
-    var xhr = new XMLHttpRequest();
-    xhr.open("GET", url, true);
-    xhr.responseType = "arraybuffer";
-    xhr.onprogress = progress;
-    xhr.onerror = function () {
-      downloadFailed(url, "the connection failed"
-        + (xhr.status ? " (HTTP " + xhr.status + ")" : " before any reply"));
-    };
-    xhr.onabort = function () {
-      downloadFailed(url, "the request was cancelled - reloading the page "
-        + "while the model is still downloading does that");
-    };
-    xhr.onload = function () {
-      if (xhr.status && (xhr.status < 200 || xhr.status >= 300)) {
-        downloadFailed(url, "HTTP " + xhr.status + " " + xhr.statusText);
-        return;
-      }
-      if (!xhr.response) { downloadFailed(url, "the reply was empty"); return; }
-      parseModel(url, xhr.response, draco);
-    };
-    xhr.send();
-  }
-
-  function parseModel(url, buffer, draco) {
-    status("Decoding " + (buffer.byteLength / 1e6).toFixed(0) + " MB …");
-    // Take the TextureLoader branch in GLTFParser rather than the
-    // ImageBitmapLoader one. ImageBitmapLoader is the only thing in three
-    // r128 that calls fetch(), and what it fetches is a blob: URL that
-    // GLTFLoader has just created from the JPEG embedded in this very file -
-    // a round trip out through the network stack and back for no gain.
-    // TextureLoader decodes the same blob through an <img>.
-    //
-    // The choice is a bare `typeof createImageBitmap !== 'undefined'` made in
-    // the GLTFParser constructor, and parse() constructs it synchronously, so
-    // the property only has to be out of sight for the length of this call.
-    var realCIB = window.createImageBitmap;
-    try { window.createImageBitmap = undefined; } catch (e) { /* frozen */ }
-    try {
-      loader.parse(buffer, "", function (gltf) {
-        if (draco) draco.dispose();
-        adopt(gltf, url);
-      }, function (err) {
-        if (draco) draco.dispose();
-        failed(url, err);
-      });
-    } finally {
-      window.createImageBitmap = realCIB;
-    }
-  }
-
-  // The model never arrived. Separate from failed(), which is everything that
-  // goes wrong once it has.
-  function downloadFailed(name, why) {
-    status("Could not download " + name + " — " + why
-      + "\nThe server log will show whether the request reached it.");
-    console.error("downloading " + name + ": " + why);
-  }
-
-  var decoderFailed = null;
-
-  // Bytes as they arrive. Without it a stalled download and a slow one look
-  // exactly the same, and the only thing on screen is the word "Loading".
-  // Content-Length is not always there - a compressed transfer has none - so
-  // the total is only shown when the server gave one.
-  function progress(e) {
-    if (!e || !e.loaded) return;
-    var mb = function (n) { return (n / 1e6).toFixed(0); };
-    status(e.lengthComputable && e.total
-      ? "Loading … " + mb(e.loaded) + " of " + mb(e.total) + " MB  ("
-        + Math.round(100 * e.loaded / e.total) + "%)"
-      : "Loading … " + mb(e.loaded) + " MB");
-  }
-
-
-
-
-  // ---- sizing and the frame loop
-  function resize() {
-    var w = stage.clientWidth, h = stage.clientHeight;
-    if (!w || !h) return;
-    renderer.setSize(w, h, false);
-    // the file's cameras carry Blender's aspect ratio; override it with the
-    // viewport's so the framing is right whatever shape the window is
-    var cam = activeCamera || camera;
-    cam.aspect = w / h;
-    cam.updateProjectionMatrix();
-  }
-  if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
-  window.addEventListener("resize", resize);
-
-  loadUrl(MODEL_URL);
   resize();
-
+  var clock = new THREE.Clock();
   renderer.setAnimationLoop(function () {
-    var dt = clock.getDelta();
-    if (mixer && playing && duration > 0) {
-      playhead += dt * speed * rateAt(playhead);
-      if (playhead > duration) playhead = 0;        // loop the whole timeline
-      applyTime(playhead);
-      updateReadout(playhead);
+    var dt = Math.min(clock.getDelta(), 0.1);
+    if (mixer && playing) {
+      applyTime(tNow + dt * speed);
+      if (tNow >= tEnd) setPlaying(false);
+      dirty = 2;
     }
-    applyReveals(playhead);
-    fly();
-    if (controls.enabled) controls.update();
-    renderer.render(scene, activeCamera || camera);
+    if (mixer) updateCamera();
+    // not in a figure view: OrbitControls would level the camera's roll
+    if (camMode !== "prey" && camMode !== "fixed" && controls.update()) dirty = 2;
+    if (dirty > 0) {
+      renderer.render(scene, camera);
+      dirty--;
+    }
   });
 })();
 </script>
+</body>
+</html>

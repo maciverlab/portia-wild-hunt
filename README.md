@@ -6,103 +6,122 @@ white-moustached jumping spider, *Portia labiata*, on the orb-weaving spider
 
 **View it: https://maciverlab.github.io/portia-wild-hunt/**
 
-The model is about 94 MB, so the first load takes a little while; it is cached
-afterwards. It needs a browser with WebGL, which every current desktop browser
-has.
+The model is about 85 MB, with a 10 MB point cloud of the prey beside it, so
+the first load takes a little while. After the download the geometry is
+decompressed, which takes a few seconds more. It needs a browser with WebGL,
+which every current desktop browser has.
 
 ## Using the viewer
 
 - Drag to orbit, scroll to zoom, right-drag to pan.
-- The buttons at the top left jump to set views of the hunt, including the
-  **Fig 3C** and **Fig 3D** cameras from the Blender scene, at their own focal
-  lengths.
-- **Toggle objects** shows or hides the prey's visual volumes, the foliage,
-  *Portia*'s trajectory phases and the prey's-eye colouring of her route. The
-  page opens on the foliage and the trajectory; everything else is off.
-- The timeline plays the hunt at 1×, 10× or 50×. **◀ Step** and **Step ▶**
-  (or the ← and → keys) move one video frame (1/30 s) and pause.
-- **Prey's Visual Range Highlight** sets how strongly the foliage visible to
-  the prey is coloured. The plant carries the photograph and the seen /
-  not-seen coding as two colour layers on one mesh, and the slider fades
-  between them.
+- The buttons at the top left set the view:
+  - **Overview** is the Fig 1 camera, looking at the web plane. The page opens
+    here.
+  - **Attack** jumps to one second before the strike and looks at *Portia*
+    from just in front of the web, beside the prey.
+  - **Follow Portia** keeps her in the middle of the view as she moves.
+  - **From the prey** looks at her from the prey's eyes.
+  - **Fig 3C** and **Fig 3D back** are the cameras from the Blender scene, at
+    their own focal lengths and roll.
+
+  Dragging or scrolling from a fixed view hands it back to the orbit camera.
+- **Toggle objects** shows or hides the foliage, the web, *Portia*'s
+  trajectory (coloured by phase) and the prey's visual volume. Switching the
+  visual volume on also colours red the foliage the prey can see.
+- The timeline is coloured by behavioural phase and turns red at the strike.
+  It plays the hunt at 1×, 10×, 50× or 100×. **◀ Step** and **Step ▶** (or
+  the ← and → keys) move one video frame (1/30 s) and pause; Shift+← and
+  Shift+→ move 10 s. Space plays and pauses.
 
 ## Contents
 
 - `docs/index.html`: the viewer (three.js r128, loaded from jsDelivr).
 - `docs/draco/`: the Draco decoder, about 1.1 MB. Served from here rather than
-  from a CDN so that a page loading a 94 MB model off its own origin cannot
+  from a CDN so that a page loading a large model off its own origin cannot
   then fail because jsDelivr is slow or blocked.
 - `.github/workflows/deploy.yml`: publishes `docs/` to GitHub Pages.
 
-The model is not stored in git. It is attached to the
+The model and the point cloud are not stored in git. They are attached to the
 [latest release](https://github.com/maciverlab/portia-wild-hunt/releases/latest),
-and the deploy workflow copies it into the site each time a release is
-published or a change to `docs/` is pushed to `main`. The workflow takes
-whatever `.glb` the release carries, so the model can be renamed without
-touching it — but `MODEL_URL` at the top of `docs/index.html` has to match the
-asset's filename.
+and the deploy workflow copies every `.glb` the release carries into the site
+each time a release is published or a change to `docs/` is pushed to `main`.
+The page loads them by name, so the assets must be called what `MODEL_URL`
+and `POINTS_URL` at the top of `docs/index.html` say:
+
+- `animation_final_foliage.glb`: the scene and the animation
+- `argiope_points.glb`: the prey's point cloud
 
 Code and data for the accompanying paper will be added here.
 
 ## Updating the model
 
-Publish a new release with the model attached (tag names must start with `v`).
-The site redeploys within a couple of minutes:
+Publish a new release with both files attached (tag names must start with
+`v`). The site redeploys within a couple of minutes:
 
-    gh release create v2.0 portia_blended_small.glb --title v2.0 --notes "What changed"
+    gh release create v3.0 animation_final_foliage.glb argiope_points.glb --title v3.0 --notes "What changed"
 
-To replace the model in the current release instead, upload over it and
+Without the GitHub CLI, do the same from the repository's **Releases** page:
+draft a new release, attach both files and publish it.
+
+To replace a file in the current release instead, upload over it and
 redeploy:
 
-    gh release upload v2.0 portia_blended_small.glb --clobber
+    gh release upload v3.0 animation_final_foliage.glb --clobber
     gh workflow run deploy.yml
 
-If the filename changes, change `MODEL_URL` in `docs/index.html` to match in
-the same push, or the site will deploy and then fail to find its model.
+If a filename changes, change `MODEL_URL` or `POINTS_URL` in
+`docs/index.html` to match in the same push, or the site will deploy and then
+fail to find its model.
 
 ## How the model is built
 
 From the Blender scene, in order:
 
-1. Export to `.glb`.
-2. `draco_glb.py` compresses the geometry, using the Draco encoder that ships
-   inside Blender's own glTF add-on. 481 MB → 117 MB, worst position error
-   1 part in 33,000 of a mesh's own extent.
-3. `slim_glb.py` drops the animation clips that drive only marker empties —
-   seventeen of twenty here — and re-encodes the textures at the resolution
-   they already have. 117 MB → 94 MB.
-4. `merge_glb.py` is for changing one object afterwards without paying
-   for the other 93 MB. Re-export just that object from Blender, run
-   `draco_glb.py` on it alone, then splice it in: a node whose name
-   matches one already in the file takes over its mesh and transform,
-   and everything else — the animations, the skin, the textures, the
-   other meshes' compressed geometry — is copied through byte for byte.
-   Run Draco on the donor, never on the merged file: `draco_glb.py`
-   reads each primitive's accessors to report what it saved, and an
-   already-compressed primitive has no `bufferView` to read.
-   It refuses a donor carrying a skin or an animation, since neither
-   can be renumbered into an existing rig without judgement.
+1. Export the animated scene to `.glb`.
+2. Weld the spider mesh. The export writes three corners for every triangle
+   (4.28 M vertices for 1.43 M triangles), and every one of them is skinned
+   on the GPU each frame. The corners differ only in their normals, because
+   the mesh is flat-shaded, so the normals are dropped and the duplicates
+   merged, leaving 760 k vertices. Without normals glTF draws a mesh
+   flat-shaded, so it looks the same.
+3. `draco_glb.py` compresses the geometry, using the Draco encoder that ships
+   inside Blender's own glTF add-on.
+4. `slim_glb.py` keeps only the four clips that move anything
+   (`Portia_merged_track`, `Portia_Walk`, `ArmatureAction.001`,
+   `Spider_bodyAction`) and re-encodes the textures at the resolution they
+   already have.
+5. The foliage is exported on its own, with the prey's view baked into it,
+   and spliced in with `merge_glb.py` in place of the old scan. The prey's
+   view is reduced to a single byte per vertex (`_SEEN`, 255 where the prey
+   can see it) before compression: two four-channel colour layers across
+   5.5 M vertices are more than the browser's Draco decoder can hold, and it
+   fails without reporting anything.
+
+`argiope_points.glb` is the prey's point cloud, clipped to the Discoid swept
+2 mm along its normal (`clip_points_to_discoid.py`). Blender's glTF exporter
+drops loose vertices, so it is written separately as a points primitive.
 
 Anything that opens the result without a Draco decoder will show an empty
 scene, because `KHR_draco_mesh_compression` is listed in `extensionsRequired`.
 
-## Views and starting state
+## Views, timing and starting state
 
-The view buttons in the top bar come from `VIEWS` in `docs/index.html`; the
-first is where the page opens. To add one, go to the moment and angle you want
-and press **V**. The view, including the timeline position and the field of
-view if it is not the default, is copied to the clipboard ready to paste into
-`VIEWS`. A view with a `time` moves the timeline there and pauses.
+All of these are named constants in the script in `docs/index.html`:
 
-`START_HIDDEN` lists what is switched off when the page opens, by group id or
-by object name. It currently holds the visual volumes, the prey's-eye route
-colouring and the trajectory markers, leaving the foliage and *Portia*'s
-trajectory phases on. `HIDE_ALWAYS` switches something off *and* keeps it out
-of the panel, so it cannot be turned back on.
+- `OVERVIEW` and `FIGURES` are the fixed views, with each camera's position,
+  roll (`up`) and field of view, taken from the Blender scene.
+- `ATTACK_VIEW` sets the Attack view: how long before the strike, and how far
+  in front of the web, to the right and up from the prey the camera sits.
+- `PHASES` holds the behavioural phases and their timeline colours.
+- `LAYERS` lists the rows in **Toggle objects** and which start on;
+  `HIDE_ALWAYS` switches objects off and keeps them out of the panel.
+- `FILE_PER_S`, `HANDOFF` and `ATTACK_RATE` map the exported clips onto hunt
+  time. The scene was exported at 10 fps with its keys authored at 30, and the
+  attack clip is authored against 60 fps.
 
 ## Previewing locally
 
-Put the `.glb` in `docs/` and serve the folder over http (opening
+Put both `.glb` files in `docs/` and serve the folder over http (opening
 `index.html` directly won't load the model):
 
     python3 -m http.server -d docs
