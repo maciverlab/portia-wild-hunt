@@ -365,7 +365,7 @@ h1 {
     { label: "Web", nodes: ["WebDrawing", "Stabilimentum"], on: true },
     { label: "Trajectory, by phase", nodes: ["Portia_track"], on: true },
     { label: "Prey's visual volume and what it can see", nodes: ["PreyEyes"], on: false, seen: true },
-    { label: "Shortest jump path", nodes: ["JumpPath_walk", "JumpPath_jump"], on: false }
+    { label: "Shortest path", nodes: ["JumpPath_walk", "JumpPath_jump"], on: false }
   ];
   // hidden, and no row in the panel: the SfM-tracked body and the alignment video frame
   var HIDE_ALWAYS = ["SfM_Root", "AlignPhotoPlane"];
@@ -810,7 +810,7 @@ h1 {
   var FIGURES = [
     { name: "Fig 3C", position: [42.8374, 31.956, 20.9418], target: [39.1765, 22.8492, 22.8557],
       up: [-0.8071, 0.4131, 0.4219], hfov: 76.09 },
-    { name: "Fig 3D back", note: "Back_Camera_Fig_D (hidden from render in Blender)",
+    { name: "Fig 3D", note: "Back_Camera_Fig_D (hidden from render in Blender)",
       position: [-24.4835, 46.9336, 103.7819], target: [-20.1608, 44.3261, 95.1496],
       up: [0.1167, 0.9654, -0.2331], hfov: 69.38 }
   ];

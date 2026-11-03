@@ -21,7 +21,7 @@ which every current desktop browser has.
     from just in front of the web, beside the prey.
   - **Follow Portia** keeps her in the middle of the view as she moves.
   - **From the prey** looks at her from the prey's eyes.
-  - **Fig 3C** and **Fig 3D back** are the cameras from the Blender scene, at
+  - **Fig 3C** and **Fig 3D** are the cameras from the Blender scene, at
     their own focal lengths and roll.
 
   Dragging or scrolling from a fixed view hands it back to the orbit camera.
