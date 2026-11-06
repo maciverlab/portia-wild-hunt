@@ -37,3 +37,8 @@ jobs:
           path: docs
       - id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          # Pages spent ten minutes in syncing_files on the 95 MB
+          # artifact and hit this action's default timeout, which
+          # then cancelled a deployment that was otherwise fine.
+          timeout: 1800000
