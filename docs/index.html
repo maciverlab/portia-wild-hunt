@@ -242,6 +242,7 @@ h1 {
     <div class="views" id="views">
       <button class="btn ghost" id="vFit" type="button">Overview</button>
       <button class="btn ghost" id="vAttack" type="button" title="A moment before the strike, from in front of the web, looking at Portia">Attack</button>
+      <button class="btn ghost" id="vMimicry" type="button" title="Aggressive mimicry, from beside Portia on the leaf, looking up at the web: she is in its plane, so it is seen nearly edge-on">View from Mimicry</button>
       <button class="btn ghost" id="vFollow" type="button">Follow Portia</button>
       <button class="btn ghost" id="vPrey" type="button">From the prey</button>
       <span class="sep"></span>
@@ -789,6 +790,29 @@ h1 {
     markDirty();
   }
   document.getElementById("vAttack").addEventListener("click", showAttack);
+  // ---- View from Mimicry: partway through aggressive mimicry, from beside
+  // Portia on the leaf, looking almost straight up past the leaf at the web,
+  // which is seen nearly edge-on and closes up into a narrow fan of strands.
+  // Scene units (mm). Her spot is the centre of the "Aggressive mimicry"
+  // primitive of Portia_track, (33.6, -11.8, 16.4), and she sits in the plane
+  // of the web: a plane fitted to the silk within 60 mm of the hub is 0.08 mm
+  // thick (sd) and she is 0.4 mm off it. The camera was placed by hand in the
+  // viewer at 04:33, 5 mm from her spot, looking 14 degrees off the web's
+  // plane. The target is on its line of sight where that passes closest to
+  // the prey (the Goal node), so orbiting from here pivots near the hub.
+  var MIMICRY_VIEW = { time: 273, position: [35.588, -12.195, 11.823], target: [25.11, 55.77, 16.51] };
+  function showMimicry() {
+    if (!mixer) return;
+    setPlaying(false);
+    applyTime(MIMICRY_VIEW.time);
+    setMode("orbit");
+    camera.position.fromArray(MIMICRY_VIEW.position);
+    controls.target.fromArray(MIMICRY_VIEW.target);
+    spiderPoint.getWorldPosition(lastSpider);
+    controls.update();
+    markDirty();
+  }
+  document.getElementById("vMimicry").addEventListener("click", showMimicry);
   modeBtns.follow.addEventListener("click", function () { setMode(camMode === "follow" ? "orbit" : "follow"); });
   modeBtns.prey.addEventListener("click", function () { setMode(camMode === "prey" ? "orbit" : "prey"); });
 
