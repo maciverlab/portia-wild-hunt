@@ -19,7 +19,7 @@ which every current desktop browser has.
     here.
   - **Attack** jumps to one second before the strike and looks at *Portia*
     from just in front of the web, beside the prey.
-  - **View from reroute** jumps to 8:07, at the end of aggressive mimicry
+  - **View from reroute** jumps to 8:11, at the end of aggressive mimicry
     just before the reroute, and looks up at the web from where *Portia* sits
     on the leaf. She is in the plane of the web, so from there it is seen
     nearly edge-on, closed up into a narrow fan of strands.
