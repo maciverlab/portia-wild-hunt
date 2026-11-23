@@ -242,7 +242,7 @@ h1 {
     <div class="views" id="views">
       <button class="btn ghost" id="vFit" type="button">Overview</button>
       <button class="btn ghost" id="vAttack" type="button" title="A moment before the strike, from in front of the web, looking at Portia">Attack</button>
-      <button class="btn ghost" id="vReroute" type="button" title="Just before the reroute, from where Portia sits on the leaf, looking up at the web: she is in its plane, so it is seen nearly edge-on">View from reroute</button>
+      <button class="btn ghost" id="vReroute" type="button" title="Just before the reroute, through Portia's eyes as she sits on the leaf in the plane of the web">View from reroute (SF2)</button>
       <button class="btn ghost" id="vFollow" type="button">Follow Portia</button>
       <button class="btn ghost" id="vPrey" type="button">From the prey</button>
       <span class="sep"></span>
@@ -531,13 +531,25 @@ h1 {
     // see it (from COLOR_1's alpha in the export; the two colour layers were 12
     // bytes a vertex over 5.5 M vertices, more than the Draco decoder could hold,
     // so it failed and the page sat after the download). Red over the photo.
+    // Every foliage mesh also drops whatever lies inside a sphere (clearUniform:
+    // centre xyz, radius w; off at radius 0), so a figure view can see past the
+    // leaves nearest its camera.
     var fol = find(root, FOLIAGE);
     if (fol) fol.traverse(function (m) {
-      var flag = m.isMesh && m.geometry.getAttribute("_seen");
-      if (!flag) return;
-      m.geometry.setAttribute("seen", flag);      // no leading underscore in GLSL
-      m.geometry.deleteAttribute("_seen");
+      if (!m.isMesh) return;
+      var flag = m.geometry.getAttribute("_seen");
+      if (flag) {
+        m.geometry.setAttribute("seen", flag);    // no leading underscore in GLSL
+        m.geometry.deleteAttribute("_seen");
+      }
       m.material.onBeforeCompile = function (sh) {
+        sh.uniforms.uClear = clearUniform;
+        sh.vertexShader = "varying vec3 vWorld;\n" + sh.vertexShader
+          .replace("#include <begin_vertex>", "#include <begin_vertex>\n  vWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+        sh.fragmentShader = "uniform vec4 uClear;\nvarying vec3 vWorld;\n" + sh.fragmentShader
+          .replace("#include <clipping_planes_fragment>", "#include <clipping_planes_fragment>\n"
+            + "  if (distance(vWorld, uClear.xyz) < uClear.w) discard;");
+        if (!flag) return;
         sh.uniforms.uSeen = seenUniform;
         sh.vertexShader = "attribute float seen;\nvarying float vSeen;\n" + sh.vertexShader
           .replace("#include <begin_vertex>", "#include <begin_vertex>\n  vSeen = seen;");
@@ -545,6 +557,8 @@ h1 {
           .replace("#include <map_fragment>", "#include <map_fragment>\n"
             + "  diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.35 + vec3(0.75, 0.05, 0.03), vSeen * uSeen);");
       };
+      // one function source for both kinds, so key the program cache by kind
+      m.material.customProgramCacheKey = function () { return flag ? "foliage_seen" : "foliage"; };
       m.material.needsUpdate = true;
     });
     var vol = find(root, "PreyVisualVolume");
@@ -639,6 +653,7 @@ h1 {
 
   // ------------------------------------------------------------------ panel
   var seenUniform = { value: 0 };
+  var clearUniform = { value: new THREE.Vector4(0, 0, 0, 0) };
   function layerRow(label, checked, enabled) {
     var row = document.createElement("label");
     row.className = "row" + (enabled ? "" : " off");
@@ -790,40 +805,49 @@ h1 {
     markDirty();
   }
   document.getElementById("vAttack").addEventListener("click", showAttack);
-  // ---- View from reroute: the end of aggressive mimicry, 1 s before the
-  // reroute starts (08:12), from where Portia sits on the leaf, looking almost
-  // straight up past the leaf at the web, which is seen nearly edge-on and
-  // closes up into a narrow fan of strands.
-  // Scene units (mm). Her spot is the centre of the "Aggressive mimicry"
-  // primitive of Portia_track, (33.6, -11.8, 16.4), and she sits in the plane
-  // of the web: a plane fitted to the silk within 60 mm of the hub is 0.08 mm
-  // thick (sd) and she is 0.4 mm off it. The camera was placed by hand in the
-  // viewer at 08:11, 1.5 mm from her spot, looking 12 degrees off the web's
-  // plane. The target only sets the orbit pivot: it is on the line of sight
-  // where that passes closest to the prey (the Goal node).
-  var REROUTE_VIEW = { time: 491, position: [32.393, -10.865, 16.156], target: [11.31, 59.36, 0.33] };
+  // ---- View from reroute: the start of the reroute (08:12, where PHASES
+  // puts it), through Portia's eyes as she still sits on the leaf in
+  // the plane of the web (a plane fitted to the silk within 60 mm of the hub
+  // is 0.08 mm thick (sd); her spot, (33.6, -11.8, 16.4), is 0.4 mm off it).
+  // This is Portia_POV in aligned_11444_autosave_animation_sun.blend at scene
+  // frame 14760 (08:12), in glTF's Y-up world, scene units (mm): 1.5 mm in
+  // front of her along her heading (AveragedTrajectoryCorrectEmpty's +X,
+  // which copies Portia_blended_carrier), with her back (+Z) as up, so the
+  // view rolls with her body. 84.5 degree lens, sensor fit AUTO on a portrait
+  // render, so like Fig 1 the VERTICAL field of view is kept. Shown as a
+  // fixed view like the figures; dragging hands it to the orbit camera,
+  // which pivots on `target`: the point on the line of sight closest to the
+  // prey (the Goal node).
+  var REROUTE_VIEW = { name: "View from reroute (SF2)", time: 492, position: [32.9145, -11.9303, 16.5052],
+    target: [-8.99, 38.8, -8.63], up: [0.6961, 0.6837, 0.2191], vfov: 84.51 };
   function showReroute() {
     if (!mixer) return;
     setPlaying(false);
     applyTime(REROUTE_VIEW.time);
-    setMode("orbit");
-    camera.position.fromArray(REROUTE_VIEW.position);
+    showFigure(REROUTE_VIEW);
     controls.target.fromArray(REROUTE_VIEW.target);
     spiderPoint.getWorldPosition(lastSpider);
-    controls.update();
-    markDirty();
   }
   document.getElementById("vReroute").addEventListener("click", showReroute);
   modeBtns.follow.addEventListener("click", function () { setMode(camMode === "follow" ? "orbit" : "follow"); });
   modeBtns.prey.addEventListener("click", function () { setMode(camMode === "prey" ? "orbit" : "prey"); });
 
-  // The figure cameras, from glb_export_ready_gait_blended.blend (parented to
-  // Camera_Prop.001), in glTF's Y-up world. That file and the current scene
-  // share a frame - the same scan vertices land at the same world positions -
-  // so these are the figures' viewpoints here too; only the prey objects were
-  // re-placed since (by ~3 units). `up` keeps each camera's roll and `hfov` its
-  // horizontal field of view (the renders were 1920 x 1080, sensor fit AUTO),
-  // so the framing matches the figure across the width at any window shape.
+  // The figure cameras, in glTF's Y-up world. Fig 3C is from
+  // glb_export_ready_gait_blended.blend (parented to Camera_Prop.001). That
+  // file and the current scene share a frame - the same scan vertices land at
+  // the same world positions - so it is the figure's viewpoint here too; only
+  // the prey objects were re-placed since (by ~3 units). `up` keeps each
+  // camera's roll and `hfov` its horizontal field of view (the renders were
+  // 1920 x 1080, sensor fit AUTO), so the framing matches the figure across
+  // the width at any window shape.
+  // Fig 3D is LocalAxisCam in aligned_11444_autosave_deleted_leaf.blend
+  // (under Camera_Prop.002, which leaves it where it is; not animated): a
+  // 26 mm lens, sensor fit AUTO, on a portrait render, so like Fig 1 its
+  // VERTICAL field of view is the one kept. That file deletes a leaf that
+  // the foliage here still has, right in front of the camera, so the view
+  // hides all foliage within `clear` mm of the camera while it is shown.
+  // That leaf is 98-144 mm out along the view (the prey is at 148), and 140
+  // is the smallest radius that clears it; 50 only takes the nearer leaves.
   // There is no Fig 3A camera in either .blend.
   // Fig 1 is PlaneCamera in aligned_11444_autosave_animation.blend, a child of
   // PlaneCamera_Rig on the web, aimed at the rig from 468 units: 74 mm lens on
@@ -835,9 +859,9 @@ h1 {
   var FIGURES = [
     { name: "Fig 3C", position: [42.8374, 31.956, 20.9418], target: [39.1765, 22.8492, 22.8557],
       up: [-0.8071, 0.4131, 0.4219], hfov: 76.09 },
-    { name: "Fig 3D", note: "Back_Camera_Fig_D (hidden from render in Blender)",
-      position: [-24.4835, 46.9336, 103.7819], target: [-20.1608, 44.3261, 95.1496],
-      up: [0.1167, 0.9654, -0.2331], hfov: 69.38 }
+    { name: "Fig 3D", note: "LocalAxisCam (aligned_11444_autosave_deleted_leaf.blend)",
+      position: [66.0998, 62.8151, 120.7113], target: [61.9314, 61.7004, 111.6901],
+      up: [-0.0468, 0.9938, -0.1012], vfov: 69.39, clear: 140 }
   ];
   var DEFAULT_FOV = 45;
   var figure = null;          // the figure view being shown, or null
@@ -857,6 +881,7 @@ h1 {
     camera.lookAt(p.clone().add(fwd));
     camera.fov = fovFor(f);
     camera.updateProjectionMatrix();
+    clearUniform.value.set(p.x, p.y, p.z, f.clear || 0);
     // what orbiting will circle once you drag: the scene's centre, projected
     // onto the line of sight, so the hand-over does not swing the view
     var c = fitBox.getCenter(new THREE.Vector3());
@@ -869,6 +894,7 @@ h1 {
   function leaveFigure() {
     if (!figure) return;
     figure = null;
+    clearUniform.value.w = 0;
     figBtns.forEach(function (b) { b.classList.remove("active"); });
     fitBtn.classList.remove("active");
     camera.up.set(0, 1, 0);           // OrbitControls assumes Y up
