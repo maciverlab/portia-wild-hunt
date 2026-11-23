@@ -765,7 +765,13 @@ h1 {
   // ------------------------------------------------------------------ camera
   var modeBtns = { orbit: null, follow: document.getElementById("vFollow"), prey: document.getElementById("vPrey") };
   function setMode(m) {
-    if (m !== "fixed") leaveFigure();
+    unroll = null;              // a view button ends any roll still easing out
+    if (m !== "fixed") {
+      leaveFigure();
+      // a figure's field of view outlasts a drag (leaveFigure keeps it), but
+      // not a button that moves to another kind of view
+      if (camera.fov !== DEFAULT_FOV) { camera.fov = DEFAULT_FOV; camera.updateProjectionMatrix(); }
+    }
     camMode = m;
     Object.keys(modeBtns).forEach(function (k) { if (modeBtns[k]) modeBtns[k].classList.toggle("active", k === m); });
     controls.enabled = m !== "prey" && m !== "fixed";
@@ -818,13 +824,14 @@ h1 {
   // frame 14760 (08:12), in glTF's Y-up world, scene units (mm): 1.5 mm in
   // front of her along her heading (AveragedTrajectoryCorrectEmpty's +X,
   // which copies Portia_blended_carrier), with her back (+Z) as up, so the
-  // view rolls with her body. 84.5 degree lens, sensor fit AUTO on a portrait
-  // render, so like Fig 1 the VERTICAL field of view is kept. Shown as a
+  // view rolls with her body. Its lens is 84.5 degrees (sensor fit AUTO on a
+  // portrait render, so vertical); the web view widens that to 100 degrees
+  // vertical, and like Fig 1 the vertical field of view is kept. Shown as a
   // fixed view like the figures; dragging hands it to the orbit camera,
   // which pivots on `target`: the point on the line of sight closest to the
   // prey (the Goal node).
   var REROUTE_VIEW = { name: "View from reroute (SF2)", time: 492, position: [32.9145, -11.9303, 16.5052],
-    target: [-8.99, 38.8, -8.63], up: [0.6961, 0.6837, 0.2191], vfov: 84.51, layers: { track: false } };
+    target: [-8.99, 38.8, -8.63], up: [0.6961, 0.6837, 0.2191], vfov: 100, layers: { track: false } };
   function showReroute() {
     if (!mixer) return;
     setPlaying(false);
@@ -897,15 +904,29 @@ h1 {
     setLayers(f.layers);
     markDirty();
   }
-  function leaveFigure() {
+  // A drag or scroll hands a figure to the orbit camera, which keeps the view
+  // level. The figure's roll is eased out over UNROLL_S seconds rather than
+  // snapped: the loop lets OrbitControls level the camera each frame, then
+  // turns it back about the line of sight by what is left of the roll.
+  var UNROLL_S = 0.8;
+  var unroll = null;          // { from: roll in radians, t: seconds so far }
+  function leaveFigure(ease) {
     if (!figure) return;
     figure = null;
     clearUniform.value.w = 0;
     figBtns.forEach(function (b) { b.classList.remove("active"); });
     fitBtn.classList.remove("active");
+    var q = camera.quaternion.clone();
+    var u = new THREE.Vector3(0, 1, 0).applyQuaternion(q);   // the figure's screen up
     camera.up.set(0, 1, 0);           // OrbitControls assumes Y up
-    camera.fov = DEFAULT_FOV;
-    camera.updateProjectionMatrix();
+    if (ease) {
+      // its roll from the level view down the same line of sight
+      camera.lookAt(controls.target);
+      u.applyQuaternion(camera.quaternion.clone().invert());
+      camera.quaternion.copy(q);
+      unroll = { from: Math.atan2(-u.x, u.y), t: 0 };
+    }
+    // the field of view stays the figure's, so a drag orbits at the same width
     camMode = "orbit";
     controls.enabled = true;
   }
@@ -919,9 +940,10 @@ h1 {
     document.getElementById("figs").appendChild(b);
     return b;
   });
-  // dragging or scrolling the view hands it back to the orbit camera
-  renderer.domElement.addEventListener("pointerdown", function () { if (figure) leaveFigure(); }, true);
-  renderer.domElement.addEventListener("wheel", function () { if (figure) leaveFigure(); }, true);
+  // dragging or scrolling the view hands it back to the orbit camera, at the
+  // figure's field of view, easing its roll level
+  renderer.domElement.addEventListener("pointerdown", function () { if (figure) leaveFigure(true); }, true);
+  renderer.domElement.addEventListener("wheel", function () { if (figure) leaveFigure(true); }, true);
 
   var _sp = new THREE.Vector3();
   function updateCamera() {
@@ -964,6 +986,15 @@ h1 {
     if (mixer) updateCamera();
     // not in a figure view: OrbitControls would level the camera's roll
     if (camMode !== "prey" && camMode !== "fixed" && controls.update()) dirty = 2;
+    // a figure's roll easing out after a drag (smoothstep), on top of the level
+    // camera OrbitControls just set; a view button ends it (setMode)
+    if (unroll) {
+      unroll.t += dt;
+      var k = unroll.t / UNROLL_S;
+      if (k >= 1) unroll = null;
+      else camera.rotateZ(unroll.from * (1 - k * k * (3 - 2 * k)));
+      dirty = 2;
+    }
     if (dirty > 0) {
       renderer.render(scene, camera);
       dirty--;

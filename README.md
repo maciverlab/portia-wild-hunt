@@ -29,7 +29,10 @@ which every current desktop browser has.
     their own focal lengths and roll. Fig 3D also turns the trajectory on,
     and View from reroute (SF2) turns it off.
 
-  Dragging or scrolling from a fixed view hands it back to the orbit camera.
+  Dragging or scrolling from a fixed view hands it back to the orbit camera,
+  which keeps that view's field of view and eases its roll level over a
+  little under a second. Attack,
+  Follow Portia and From the prey go back to the normal 45°.
 - **Toggle objects** shows or hides the foliage, the web, *Portia*'s
   trajectory (coloured by phase) and the prey's visual volume. Switching the
   visual volume on also colours red the foliage the prey can see.
@@ -118,8 +121,9 @@ All of these are named constants in the script in `docs/index.html`:
 - `ATTACK_VIEW` sets the Attack view: how long before the strike, and how far
   in front of the web, to the right and up from the prey the camera sits.
 - `REROUTE_VIEW` sets the View from reroute camera: the hunt time it jumps
-  to, and the camera's position, target, roll (`up`) and vertical field of
-  view, taken from Portia_POV in the Blender scene at that frame. The target
+  to, the camera's position, target and roll (`up`), taken from Portia_POV
+  in the Blender scene at that frame, and its vertical field of view (100°,
+  wider than that camera's 84.5° lens). The target
   also sets the orbit pivot: it lies on the line of sight, where that passes
   closest to the prey.
 - `PHASES` holds the behavioural phases and their timeline colours.
