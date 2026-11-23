@@ -26,7 +26,8 @@ which every current desktop browser has.
   - **Follow Portia** keeps her in the middle of the view as she moves.
   - **From the prey** looks at her from the prey's eyes.
   - **Fig 3C** and **Fig 3D** are the cameras from the Blender scene, at
-    their own focal lengths and roll.
+    their own focal lengths and roll. Fig 3D also turns the trajectory on,
+    and View from reroute (SF2) turns it off.
 
   Dragging or scrolling from a fixed view hands it back to the orbit camera.
 - **Toggle objects** shows or hides the foliage, the web, *Portia*'s
@@ -122,7 +123,8 @@ All of these are named constants in the script in `docs/index.html`:
   also sets the orbit pivot: it lies on the line of sight, where that passes
   closest to the prey.
 - `PHASES` holds the behavioural phases and their timeline colours.
-- `LAYERS` lists the rows in **Toggle objects** and which start on;
+- `LAYERS` lists the rows in **Toggle objects** and which start on (a view's
+  `layers` switches rows by their `id` when it is shown);
   `HIDE_ALWAYS` switches objects off and keeps them out of the panel.
 - `FILE_PER_S`, `HANDOFF` and `ATTACK_RATE` map the exported clips onto hunt
   time. The scene was exported at 10 fps with its keys authored at 30, and the

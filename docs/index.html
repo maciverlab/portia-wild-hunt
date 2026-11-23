@@ -360,11 +360,12 @@ h1 {
   // on and off with the prey's visual volume (the layer marked `seen` below).
   var SEEN_STRENGTH = 1.0;
 
-  // Panel rows: label, node names as in the file, on at load.
+  // Panel rows: label, node names as in the file, on at load. A view's
+  // `layers` ({ id: on }) switches the rows with that id when it is shown.
   var LAYERS = [
     { label: "Foliage scan", nodes: [FOLIAGE], on: true },
     { label: "Web", nodes: ["WebDrawing", "Stabilimentum", "DewDrops_DSCN0352"], on: true },
-    { label: "Trajectory, by phase", nodes: ["Portia_track"], on: false },
+    { label: "Trajectory, by phase", nodes: ["Portia_track"], on: false, id: "track" },
     { label: "Prey's visual volume and what it can see", nodes: ["PreyEyes"], on: false, seen: true },
     { label: "Shortest path", nodes: ["JumpPath_walk", "JumpPath_jump"], on: false }
   ];
@@ -681,8 +682,12 @@ h1 {
       }
       cb.addEventListener("change", set);
       set();
+      L.setOn = function (on) { if (!cb.disabled) { cb.checked = on; set(); } };
     });
     HIDE_ALWAYS.forEach(function (n) { var o = find(root, n); if (o) o.visible = false; });
+  }
+  function setLayers(m) {
+    if (m) LAYERS.forEach(function (L) { if (L.id in m && L.setOn) L.setOn(m[L.id]); });
   }
 
   // ------------------------------------------------------------------ timeline
@@ -819,7 +824,7 @@ h1 {
   // which pivots on `target`: the point on the line of sight closest to the
   // prey (the Goal node).
   var REROUTE_VIEW = { name: "View from reroute (SF2)", time: 492, position: [32.9145, -11.9303, 16.5052],
-    target: [-8.99, 38.8, -8.63], up: [0.6961, 0.6837, 0.2191], vfov: 84.51 };
+    target: [-8.99, 38.8, -8.63], up: [0.6961, 0.6837, 0.2191], vfov: 84.51, layers: { track: false } };
   function showReroute() {
     if (!mixer) return;
     setPlaying(false);
@@ -861,7 +866,7 @@ h1 {
       up: [-0.8071, 0.4131, 0.4219], hfov: 76.09 },
     { name: "Fig 3D", note: "LocalAxisCam (aligned_11444_autosave_deleted_leaf.blend)",
       position: [66.0998, 62.8151, 120.7113], target: [61.9314, 61.7004, 111.6901],
-      up: [-0.0468, 0.9938, -0.1012], vfov: 69.39, clear: 140 }
+      up: [-0.0468, 0.9938, -0.1012], vfov: 69.39, clear: 140, layers: { track: true } }
   ];
   var DEFAULT_FOV = 45;
   var figure = null;          // the figure view being shown, or null
@@ -889,6 +894,7 @@ h1 {
     controls.target.copy(p).addScaledVector(fwd, d);
     figBtns.forEach(function (b) { b.classList.toggle("active", b.textContent === f.name); });
     fitBtn.classList.toggle("active", f === OVERVIEW);
+    setLayers(f.layers);
     markDirty();
   }
   function leaveFigure() {
