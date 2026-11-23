@@ -19,7 +19,7 @@ which every current desktop browser has.
     here.
   - **Attack** jumps to one second before the strike and looks at *Portia*
     from just in front of the web, beside the prey.
-  - **View from Mimicry** jumps into aggressive mimicry and looks up at the
+  - **View from reroute** jumps into aggressive mimicry and looks up at the
     web from beside *Portia* on the leaf. She is in the plane of the web, so
     from there it is seen nearly edge-on, closed up into a narrow fan of
     strands.
@@ -116,7 +116,7 @@ All of these are named constants in the script in `docs/index.html`:
   roll (`up`) and field of view, taken from the Blender scene.
 - `ATTACK_VIEW` sets the Attack view: how long before the strike, and how far
   in front of the web, to the right and up from the prey the camera sits.
-- `MIMICRY_VIEW` sets the View from Mimicry camera: the hunt time it jumps
+- `REROUTE_VIEW` sets the View from reroute camera: the hunt time it jumps
   to, and the camera's position and target. The camera was placed by hand in the viewer,
   5 mm from *Portia*'s spot. The target only sets the orbit pivot: it lies on
   the line of sight, where that passes closest to the prey.
